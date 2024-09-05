@@ -45,3 +45,21 @@ func nextMatch(b *bitset) (s uint32) {
 	*b &= ^(1 << s) // clear bit |s|
 	return
 }
+
+//---
+
+func metaMatchH2_64(m *metadata, h uint64) uint64 {
+	b := simd.MatchMetadata((*[16]int8)(m), int8(h))
+	return uint64(b)
+}
+
+func metaMatchEmpty_64(m *metadata) uint64 {
+	b := simd.MatchMetadata((*[16]int8)(m), empty)
+	return uint64(b)
+}
+
+func nextMatch_64(b *uint64) (s uint64) {
+	s = uint64(bits.TrailingZeros16(uint16(*b)))
+	*b &= ^(1 << s) // clear bit |s|
+	return
+}

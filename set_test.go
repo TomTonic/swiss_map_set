@@ -202,8 +202,8 @@ func testSetClear[K comparable](t *testing.T, keys []K) {
 	// Assert that the Set was actually cleared...
 	var k K
 	for _, g := range m.groups {
-		for i := range g.keys {
-			assert.Equal(t, k, g.keys[i])
+		for i := range g {
+			assert.Equal(t, k, g[i])
 		}
 	}
 }

@@ -53,3 +53,24 @@ func hasZeroByte(x uint64) bitset {
 func castUint64(m *metadata) uint64 {
 	return *(*uint64)((unsafe.Pointer)(m))
 }
+
+// ---
+
+func metaMatchH2_64(m *metadata, h uint64) uint64 {
+	// https://graphics.stanford.edu/~seander/bithacks.html##ValueInWord
+	return hasZeroByte_64(castUint64(m) ^ (loBits * uint64(h)))
+}
+
+func metaMatchEmpty_64(m *metadata) uint64 {
+	return hasZeroByte_64(castUint64(m) ^ hiBits)
+}
+
+func nextMatch_64(b *uint64) uint64 {
+	s := uint64(bits.TrailingZeros64(*b))
+	*b &= ^(1 << s) // clear bit |s|
+	return s >> 3   // div by 8
+}
+
+func hasZeroByte_64(x uint64) uint64 {
+	return ((x - loBits) & ^(x)) & hiBits
+}

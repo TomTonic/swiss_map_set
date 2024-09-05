@@ -39,9 +39,11 @@ type Set[K comparable] struct {
 //type metadata [groupSize]int8
 
 // group is a group of 16 key-value pairs
-type sgroup[K comparable] struct {
-	keys [groupSize]K
-}
+//
+//	type sgroup[K comparable] struct {
+//		keys [groupSize]K
+//	}
+type sgroup[K comparable] [groupSize]K
 
 //const (
 // h1Mask    uint64 = 0xffff_ffff_ffff_ff80
@@ -71,28 +73,41 @@ func NewSet[K comparable](sz uint32) (s *Set[K]) {
 	return
 }
 
-// Has returns true if |key| is present in |m|.
+// Has returns true if |key| is present in |set|.
 func (set *Set[K]) Has(key K) (ok bool) {
-	hi, lo := splitHash(set.hash.Hash(key))
-	g := probeStart(hi, len(set.groups))
+	//	hi, lo := splitHash(set.hash.Hash(key))
+	hash := set.hash.Hash(key)
+	// hi := h1((hash & h1Mask) >> 7)
+	// lo := h2(hash & h2Mask)
+	lo := hash & h2Mask
+	// h1Mask    uint64 = 0xffff_ffff_ffff_ff80 -> 0x0000_0000_ffff_ff80
+	// h2Mask    uint64 = 0x0000_0000_0000_007f
+	// g := uint32(hi) % uint32(len(set.groups))
+	// g := probeStart(hi, len(set.groups))
+	// g := fastModN(uint32(hi), uint32(len(set.groups)))
+	// g := uint32((uint64(uint32(hi)) * uint64(uint32(len(set.groups)))) >> 32)
+	// g := uint64(uint32(hi)) * uint64(len(set.groups)) >> 32
+	g := ((hash & 0x0000_007f_ffff_ff80) >> 7) * uint64(len(set.groups)) >> 32
 	for { // inlined find loop
-		matches := metaMatchH2(&set.ctrl[g], lo)
+		ctrl := &(set.ctrl[g])
+		matches := metaMatchH2_64(ctrl, lo)
+		group := &(set.groups[g])
 		for matches != 0 {
-			s := nextMatch(&matches)
-			if key == set.groups[g].keys[s] {
+			s := nextMatch_64(&matches)
+			if key == group[s] {
 				ok = true
 				return
 			}
 		}
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = metaMatchEmpty(&set.ctrl[g])
+		matches = metaMatchEmpty_64(ctrl)
 		if matches != 0 {
 			ok = false
 			return
 		}
 		g += 1 // linear probing
-		if g >= uint32(len(set.groups)) {
+		if g >= uint64(len(set.groups)) {
 			g = 0
 		}
 	}
@@ -109,7 +124,7 @@ func (set *Set[K]) Put(key K) {
 		matches := metaMatchH2(&set.ctrl[g], lo)
 		for matches != 0 {
 			s := nextMatch(&matches)
-			if key == set.groups[g].keys[s] { // update
+			if key == set.groups[g][s] { // update
 				// m.groups[g].keys[s] = key     // superflouos
 				// m.groups[g].values[s] = value // no map - vo values
 				return
@@ -120,7 +135,7 @@ func (set *Set[K]) Put(key K) {
 		matches = metaMatchEmpty(&set.ctrl[g])
 		if matches != 0 { // insert
 			s := nextMatch(&matches)
-			set.groups[g].keys[s] = key
+			set.groups[g][s] = key
 			//m.groups[g].values[s] = value
 			set.ctrl[g][s] = int8(lo)
 			set.resident++
@@ -141,7 +156,7 @@ func (set *Set[K]) Delete(key K) (ok bool) {
 		matches := metaMatchH2(&set.ctrl[g], lo)
 		for matches != 0 {
 			s := nextMatch(&matches)
-			if key == set.groups[g].keys[s] {
+			if key == set.groups[g][s] {
 				ok = true
 				// optimization: if |m.ctrl[g]| contains any empty
 				// metadata bytes, we can physically delete |key|
@@ -158,7 +173,7 @@ func (set *Set[K]) Delete(key K) (ok bool) {
 					set.dead++
 				}
 				var k K
-				set.groups[g].keys[s] = k
+				set.groups[g][s] = k
 				return
 			}
 		}
@@ -192,7 +207,7 @@ func (set *Set[K]) Iter(cb func(k K) (stop bool)) {
 			if c == empty || c == tombstone {
 				continue
 			}
-			k := groups[g].keys[s]
+			k := groups[g][s]
 			if stop := cb(k); stop {
 				return
 			}
@@ -214,8 +229,8 @@ func (set *Set[K]) Clear() {
 	var k K
 	for i := range set.groups {
 		g := &set.groups[i]
-		for i := range g.keys {
-			g.keys[i] = k
+		for i := range g {
+			g[i] = k
 		}
 	}
 	set.resident, set.dead = 0, 0
@@ -240,7 +255,7 @@ func (set *Set[K]) find(key K, hi h1, lo h2) (g, s uint32, ok bool) {
 		matches := metaMatchH2(&set.ctrl[g], lo)
 		for matches != 0 {
 			s = nextMatch(&matches)
-			if key == set.groups[g].keys[s] {
+			if key == set.groups[g][s] {
 				return g, s, true
 			}
 		}
@@ -282,7 +297,7 @@ func (set *Set[K]) rehash(n uint32) {
 			if c == empty || c == tombstone {
 				continue
 			}
-			set.Put(groups[g].keys[s])
+			set.Put(groups[g][s])
 		}
 	}
 }
