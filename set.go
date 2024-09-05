@@ -26,7 +26,7 @@ import (
 // based on Abseil's flat_hash_map.
 type Set[K comparable] struct {
 	ctrl     []metadata
-	groups   []sgroup[K]
+	slots    []slot[K]
 	hash     maphash.Hasher[K]
 	resident uint32
 	dead     uint32
@@ -40,10 +40,10 @@ type Set[K comparable] struct {
 
 // group is a group of 16 key-value pairs
 //
-//	type sgroup[K comparable] struct {
+//	type slot[K comparable] struct {
 //		keys [groupSize]K
 //	}
-type sgroup[K comparable] [groupSize]K
+type slot[K comparable] [groupSize]K
 
 //const (
 // h1Mask    uint64 = 0xffff_ffff_ffff_ff80
@@ -62,10 +62,10 @@ type sgroup[K comparable] [groupSize]K
 func NewSet[K comparable](sz uint32) (s *Set[K]) {
 	groups := numGroups(sz)
 	s = &Set[K]{
-		ctrl:   make([]metadata, groups),
-		groups: make([]sgroup[K], groups),
-		hash:   maphash.NewHasher[K](),
-		limit:  groups * maxAvgGroupLoad,
+		ctrl:  make([]metadata, groups),
+		slots: make([]slot[K], groups),
+		hash:  maphash.NewHasher[K](),
+		limit: groups * maxAvgGroupLoad,
 	}
 	for i := range s.ctrl {
 		s.ctrl[i] = newEmptyMetadata()
@@ -75,26 +75,17 @@ func NewSet[K comparable](sz uint32) (s *Set[K]) {
 
 // Has returns true if |key| is present in |set|.
 func (set *Set[K]) Has(key K) (ok bool) {
-	//	hi, lo := splitHash(set.hash.Hash(key))
 	hash := set.hash.Hash(key)
-	// hi := h1((hash & h1Mask) >> 7)
-	// lo := h2(hash & h2Mask)
-	lo := hash & h2Mask
-	// h1Mask    uint64 = 0xffff_ffff_ffff_ff80 -> 0x0000_0000_ffff_ff80
-	// h2Mask    uint64 = 0x0000_0000_0000_007f
-	// g := uint32(hi) % uint32(len(set.groups))
-	// g := probeStart(hi, len(set.groups))
-	// g := fastModN(uint32(hi), uint32(len(set.groups)))
-	// g := uint32((uint64(uint32(hi)) * uint64(uint32(len(set.groups)))) >> 32)
-	// g := uint64(uint32(hi)) * uint64(len(set.groups)) >> 32
-	g := ((hash & 0x0000_007f_ffff_ff80) >> 7) * uint64(len(set.groups)) >> 32
+	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
+	H2 := hash & 0x0000_0000_0000_007f
+	group := H1 % uint64(len(set.slots))
 	for { // inlined find loop
-		ctrl := &(set.ctrl[g])
-		matches := metaMatchH2_64(ctrl, lo)
-		group := &(set.groups[g])
+		ctrl := &(set.ctrl[group])
+		slot := &(set.slots[group])
+		matches := metaMatchH2_64(ctrl, H2)
 		for matches != 0 {
 			s := nextMatch_64(&matches)
-			if key == group[s] {
+			if key == slot[s] {
 				ok = true
 				return
 			}
@@ -106,9 +97,9 @@ func (set *Set[K]) Has(key K) (ok bool) {
 			ok = false
 			return
 		}
-		g += 1 // linear probing
-		if g >= uint64(len(set.groups)) {
-			g = 0
+		group += 1 // linear probing
+		if group >= uint64(len(set.slots)) {
+			group = 0
 		}
 	}
 }
@@ -118,13 +109,18 @@ func (set *Set[K]) Put(key K) {
 	if set.resident >= set.limit {
 		set.rehash(set.nextSize())
 	}
-	hi, lo := splitHash(set.hash.Hash(key))
-	g := probeStart(hi, len(set.groups))
+	//hi, lo := splitHash(set.hash.Hash(key))
+	_, lo := splitHash(set.hash.Hash(key))
+	hash := set.hash.Hash(key)
+	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
+	//H2 := hash & 0x0000_0000_0000_007f
+	//g := probeStart(hi, len(set.slots))
+	g := H1 % uint64(len(set.slots))
 	for { // inlined find loop
 		matches := metaMatchH2(&set.ctrl[g], lo)
 		for matches != 0 {
 			s := nextMatch(&matches)
-			if key == set.groups[g][s] { // update
+			if key == set.slots[g][s] { // update
 				// m.groups[g].keys[s] = key     // superflouos
 				// m.groups[g].values[s] = value // no map - vo values
 				return
@@ -135,14 +131,14 @@ func (set *Set[K]) Put(key K) {
 		matches = metaMatchEmpty(&set.ctrl[g])
 		if matches != 0 { // insert
 			s := nextMatch(&matches)
-			set.groups[g][s] = key
+			set.slots[g][s] = key
 			//m.groups[g].values[s] = value
 			set.ctrl[g][s] = int8(lo)
 			set.resident++
 			return
 		}
 		g += 1 // linear probing
-		if g >= uint32(len(set.groups)) {
+		if g >= uint64(len(set.slots)) {
 			g = 0
 		}
 	}
@@ -151,12 +147,12 @@ func (set *Set[K]) Put(key K) {
 // Delete attempts to remove |key|, returns true successful.
 func (set *Set[K]) Delete(key K) (ok bool) {
 	hi, lo := splitHash(set.hash.Hash(key))
-	g := probeStart(hi, len(set.groups))
+	g := probeStart2(hi, len(set.slots))
 	for {
 		matches := metaMatchH2(&set.ctrl[g], lo)
 		for matches != 0 {
 			s := nextMatch(&matches)
-			if key == set.groups[g][s] {
+			if key == set.slots[g][s] {
 				ok = true
 				// optimization: if |m.ctrl[g]| contains any empty
 				// metadata bytes, we can physically delete |key|
@@ -173,7 +169,7 @@ func (set *Set[K]) Delete(key K) (ok bool) {
 					set.dead++
 				}
 				var k K
-				set.groups[g][s] = k
+				set.slots[g][s] = k
 				return
 			}
 		}
@@ -185,7 +181,7 @@ func (set *Set[K]) Delete(key K) (ok bool) {
 			return
 		}
 		g += 1 // linear probing
-		if g >= uint32(len(set.groups)) {
+		if g >= uint32(len(set.slots)) {
 			g = 0
 		}
 	}
@@ -199,7 +195,7 @@ func (set *Set[K]) Delete(key K) (ok bool) {
 func (set *Set[K]) Iter(cb func(k K) (stop bool)) {
 	// take a consistent view of the table in case
 	// we rehash during iteration
-	ctrl, groups := set.ctrl, set.groups
+	ctrl, groups := set.ctrl, set.slots
 	// pick a random starting group
 	g := randIntN(len(groups))
 	for n := 0; n < len(groups); n++ {
@@ -227,8 +223,8 @@ func (set *Set[K]) Clear() {
 		}
 	}
 	var k K
-	for i := range set.groups {
-		g := &set.groups[i]
+	for i := range set.slots {
+		g := &set.slots[i]
 		for i := range g {
 			g[i] = k
 		}
@@ -250,12 +246,12 @@ func (set *Set[K]) Capacity() int {
 // find returns the location of |key| if present, or its insertion location if absent.
 // for performance, find is manually inlined into public methods.
 func (set *Set[K]) find(key K, hi h1, lo h2) (g, s uint32, ok bool) {
-	g = probeStart(hi, len(set.groups))
+	g = probeStart2(hi, len(set.slots))
 	for {
 		matches := metaMatchH2(&set.ctrl[g], lo)
 		for matches != 0 {
 			s = nextMatch(&matches)
-			if key == set.groups[g][s] {
+			if key == set.slots[g][s] {
 				return g, s, true
 			}
 		}
@@ -267,23 +263,23 @@ func (set *Set[K]) find(key K, hi h1, lo h2) (g, s uint32, ok bool) {
 			return g, s, false
 		}
 		g += 1 // linear probing
-		if g >= uint32(len(set.groups)) {
+		if g >= uint32(len(set.slots)) {
 			g = 0
 		}
 	}
 }
 
 func (set *Set[K]) nextSize() (n uint32) {
-	n = uint32(len(set.groups)) * 2
+	n = uint32(len(set.slots)) * 2
 	if set.dead >= (set.resident / 2) {
-		n = uint32(len(set.groups))
+		n = uint32(len(set.slots))
 	}
 	return
 }
 
 func (set *Set[K]) rehash(n uint32) {
-	groups, ctrl := set.groups, set.ctrl
-	set.groups = make([]sgroup[K], n)
+	groups, ctrl := set.slots, set.ctrl
+	set.slots = make([]slot[K], n)
 	set.ctrl = make([]metadata, n)
 	for i := range set.ctrl {
 		set.ctrl[i] = newEmptyMetadata()
@@ -303,8 +299,12 @@ func (set *Set[K]) rehash(n uint32) {
 }
 
 func (set *Set[K]) loadFactor() float32 {
-	slots := float32(len(set.groups) * groupSize)
+	slots := float32(len(set.slots) * groupSize)
 	return float32(set.resident-set.dead) / slots
+}
+
+func probeStart2(hi h1, groups int) uint32 {
+	return uint32(uint64(hi) % uint64(groups))
 }
 
 // numGroups returns the minimum number of groups needed to store |n| elems.

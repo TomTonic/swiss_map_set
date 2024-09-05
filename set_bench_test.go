@@ -54,9 +54,9 @@ func BenchmarkInt64Sets(b *testing.B) {
 }
 
 func TestMemoryFootprintSet(t *testing.T) {
-	//	t.Skip("unskip for memory footprint stats")
+	//t.Skip("unskip for memory footprint stats")
 	var samples []float64
-	for n := 10; n <= 10_000; n += 10 {
+	for n := 10; n <= 60_000; n += 10 {
 		b1 := testing.Benchmark(func(b *testing.B) {
 			// max load factor 7/8
 			m := NewSet[int](uint32(n))
@@ -86,6 +86,10 @@ func benchmarkRuntimeSet[K comparable](b *testing.B, keys []K) {
 	for i := 0; i < b.N; i++ {
 		_, ok = m[keys[uint32(i)&mod]]
 	}
+	//	assert.True(b, ok)
+	for i := b.N; i < b.N*2; i++ {
+		_, ok = m[keys[uint32(i-b.N)&mod]]
+	}
 	assert.True(b, ok)
 	b.ReportAllocs()
 }
@@ -102,6 +106,10 @@ func benchmarkSwissSet[K comparable](b *testing.B, keys []K) {
 	var ok bool
 	for i := 0; i < b.N; i++ {
 		ok = m.Has(keys[uint32(i)&mod])
+	}
+	//	assert.True(b, ok)
+	for i := b.N; i < b.N*2; i++ {
+		ok = m.Has(keys[uint32(i-b.N)&mod])
 	}
 	assert.True(b, ok)
 	b.ReportAllocs()
