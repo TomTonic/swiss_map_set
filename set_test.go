@@ -201,7 +201,8 @@ func testSetClear[K comparable](t *testing.T, keys []K) {
 
 	// Assert that the Set was actually cleared...
 	var k K
-	for _, g := range m.slots {
+	for _, d := range m.data {
+		g := d.slots
 		for i := range g {
 			assert.Equal(t, k, g[i])
 		}
@@ -343,20 +344,20 @@ func testProbeStatsSet[K comparable](t *testing.T, keys []K) {
 	}
 */
 func getProbeLengthSet[K comparable](t *testing.T, m *Set[K], key K) (length uint32, ok bool) {
-	var end uint32
-	hi, lo := splitHash(m.hash.Hash(key))
-	start := probeStart(hi, len(m.slots))
-	end, _, ok = m.find(key, hi, lo)
+	var end uint64
+	hi, _ := splitHash(m.hash.Hash(key))
+	start := uint64(probeStart(hi, len(m.data)))
+	end, _, ok = m.find(key)
 	if end < start { // wrapped
-		end += uint32(len(m.slots))
+		end += uint64(len(m.data))
 	}
-	length = (end - start) + 1
+	length = uint32((end - start) + 1)
 	require.True(t, length > 0)
 	return
 }
 
 func getProbeStatsSet[K comparable](t *testing.T, m *Set[K], keys []K) (stats probeStats) {
-	stats.groups = uint32(len(m.slots))
+	stats.groups = uint32(len(m.data))
 	stats.loadFactor = m.loadFactor()
 	var presentSum, absentSum float32
 	stats.presentMin = math.MaxInt32

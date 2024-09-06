@@ -28,12 +28,13 @@ func BenchmarkStringSets(b *testing.B) {
 	const keySz = 8
 	sizes := []int{16, 128, 1024, 8192, 131072}
 	for _, n := range sizes {
+		keys := genStringData(keySz, n)
 		b.Run("n="+strconv.Itoa(n), func(b *testing.B) {
 			b.Run("runtime Set", func(b *testing.B) {
-				benchmarkRuntimeSet(b, genStringData(keySz, n))
+				benchmarkRuntimeSet(b, keys)
 			})
 			b.Run("swiss.Set", func(b *testing.B) {
-				benchmarkSwissSet(b, genStringData(keySz, n))
+				benchmarkSwissSet(b, keys)
 			})
 		})
 	}
@@ -43,11 +44,12 @@ func BenchmarkInt64Sets(b *testing.B) {
 	sizes := []int{16, 128, 1024, 8192, 131072}
 	for _, n := range sizes {
 		b.Run("n="+strconv.Itoa(n), func(b *testing.B) {
+			keys := generateInt64Data(n)
 			b.Run("runtime Set", func(b *testing.B) {
-				benchmarkRuntimeSet(b, generateInt64Data(n))
+				benchmarkRuntimeSet(b, keys)
 			})
 			b.Run("swiss.Set", func(b *testing.B) {
-				benchmarkSwissSet(b, generateInt64Data(n))
+				benchmarkSwissSet(b, keys)
 			})
 		})
 	}

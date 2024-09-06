@@ -48,13 +48,13 @@ func nextMatch(b *bitset) (s uint32) {
 
 //---
 
-func metaMatchH2_64(m *metadata, h uint64) uint64 {
-	b := simd.MatchMetadata((*[16]int8)(m), int8(h))
+func metaMatchH2_64(m *[16]int8, h uint64) uint64 {
+	b := simd.MatchMetadata((m), int8(h))
 	return uint64(b)
 }
 
-func metaMatchEmpty_64(m *metadata) uint64 {
-	b := simd.MatchMetadata((*[16]int8)(m), empty)
+func metaMatchEmpty_64(m *[16]int8) uint64 {
+	b := simd.MatchMetadata(m, kEmpty)
 	return uint64(b)
 }
 
