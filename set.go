@@ -18,20 +18,14 @@ import (
 	"github.com/dolthub/maphash"
 )
 
-//const (
-// maxLoadFactor = float32(maxAvgGroupLoad) / float32(groupSize)
-//)
-
 // Set is an open-addressing set
 // based on Abseil's flat_hash_map.
 type Set[K comparable] struct {
-	//	ctrl     []metadata
-	//	slots    []slot[K]
-	data     []Group[K]
-	hash     maphash.Hasher[K]
-	resident uint32
-	dead     uint32
-	limit    uint32
+	hashFunction maphash.Hasher[K]
+	resident     uint32
+	dead         uint32
+	elementLimit uint32
+	group        []Group[K]
 }
 
 // metadata is the h2 metadata array for a group.
@@ -40,15 +34,10 @@ type Set[K comparable] struct {
 //type metadata [groupSize]int8
 
 // group is a group of 16 keys
-//
-//	type slot[K comparable] struct {
-//		keys [groupSize]K
-//	}
-type slot[K comparable] [groupSize]K
 
 type Group[K comparable] struct {
-	ctrl  [groupSize]int8
-	slots [groupSize]K
+	ctrl [groupSize]int8
+	slot [groupSize]K
 }
 
 const (
@@ -58,51 +47,74 @@ const (
 	// kFull= ... // 0b0hhhhhhh, h = bit from hash value
 )
 
-//const (
-// h1Mask    uint64 = 0xffff_ffff_ffff_ff80
-// h2Mask    uint64 = 0x0000_0000_0000_007f
-// empty     int8   = -128 // 0b1000_0000
-// tombstone int8   = -2   // 0b1111_1110
-//)
-
-// h1 is a 57 bit hash prefix
-//type h1 uint64
-
-// h2 is a 7 bit hash suffix
-//type h2 int8
-
 // NewSet constructs a Set.
 func NewSet[K comparable](sz uint32) (s *Set[K]) {
-	groups := numGroups(sz)
+	reqNrOfGroups := numGroups(sz)
 	s = &Set[K]{
-		//ctrl:  make([]metadata, groups),
-		//slots: make([]slot[K], groups),
-		data:  make([]Group[K], groups),
-		hash:  maphash.NewHasher[K](),
-		limit: groups * maxAvgGroupLoad,
+		hashFunction: maphash.NewHasher[K](),
+		elementLimit: reqNrOfGroups * maxAvgGroupLoad,
+		group:        make([]Group[K], reqNrOfGroups),
 	}
-	for i := range s.data {
+	for i := range len(s.group) {
+		g := &s.group[i]
 		for j := range groupSize {
-			s.data[i].ctrl[j] = kEmpty
+			g.ctrl[j] = kEmpty
 		}
 	}
 	return
 }
 
-// Has returns true if |key| is present in |set|.
-func (set *Set[K]) Has(key K) (ok bool) {
-	hash := set.hash.Hash(key)
+// Contains returns true if |element| is present in the |Set|.
+func (set *Set[K]) Contains(element K) bool {
+	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := hash & 0x0000_0000_0000_007f
-	group := H1 % uint64(len(set.data))
-	for { // inlined find loop
-		ctrl := &(set.data[group].ctrl)
-		slot := &(set.data[group].slots)
+	grpIdx := H1 % uint64(len(set.group))
+	grpCnt := uint64(len(set.group))
+	for {
+		ctrl := &(set.group[grpIdx].ctrl)
+		slot := &(set.group[grpIdx].slot)
 		matches := metaMatchH2_64(ctrl, H2)
 		for matches != 0 {
 			s := nextMatch_64(&matches)
-			if key == slot[s] {
-				ok = true
+			if element == slot[s] {
+				return true
+			}
+		}
+		// |key| is not in group |g|,
+		// stop probing if we see an empty slot
+		matches = metaMatchEmpty_64(ctrl)
+		if matches != 0 {
+			// there is an empty slot - the element, if it had been added, hat either
+			// been found until now or it had been added in the next empty spot -
+			// well, this is the next empty spot...
+			return false
+		}
+		grpIdx += 1 // carousel through all groups
+		if grpIdx >= grpCnt {
+			grpIdx = 0
+		}
+	}
+}
+
+// Add attempts to insert |key| and |value|
+func (set *Set[K]) Add(element K) {
+	if set.resident >= set.elementLimit {
+		set.rehash(set.nextSize())
+	}
+	hash := set.hashFunction.Hash(element)
+	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
+	H2 := hash & 0x0000_0000_0000_007f
+	grpIdx := H1 % uint64(len(set.group))
+	for {
+		ctrl := &(set.group[grpIdx].ctrl)
+		slot := &(set.group[grpIdx].slot)
+
+		matches := metaMatchH2_64(ctrl, H2)
+		for matches != 0 {
+			s := nextMatch_64(&matches)
+			if element == slot[s] {
+				// found - already in, just return
 				return
 			}
 		}
@@ -110,69 +122,33 @@ func (set *Set[K]) Has(key K) (ok bool) {
 		// stop probing if we see an empty slot
 		matches = metaMatchEmpty_64(ctrl)
 		if matches != 0 {
-			ok = false
-			return
-		}
-		group += 1 // linear probing
-		if group >= uint64(len(set.data)) {
-			group = 0
-		}
-	}
-}
-
-// Put attempts to insert |key| and |value|
-func (set *Set[K]) Put(key K) {
-	if set.resident >= set.limit {
-		set.rehash(set.nextSize())
-	}
-	//hi, lo := splitHash(set.hash.Hash(key))
-	//_, lo := splitHash(set.hash.Hash(key))
-	hash := set.hash.Hash(key)
-	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := hash & 0x0000_0000_0000_007f
-	//g := probeStart(hi, len(set.slots))
-	g := H1 % uint64(len(set.data))
-	for { // inlined find loop
-		ctrl := &(set.data[g].ctrl)
-		slot := &(set.data[g].slots)
-
-		matches := metaMatchH2_64(ctrl, H2)
-		for matches != 0 {
-			s := nextMatch_64(&matches)
-			if key == slot[s] {
-				// found - already is set
-				return
-			}
-		}
-		// |key| is not in group |g|,
-		// stop probing if we see an empty slot
-		matches = metaMatchEmpty_64(ctrl)
-		if matches != 0 { // insert
+			// empty spot -> can't be in (see Contains) -> insert
 			s := nextMatch_64(&matches)
 			ctrl[s] = int8(H2)
-			slot[s] = key
+			slot[s] = element
 			set.resident++
 			return
 		}
-		g += 1 // linear probing
-		if g >= uint64(len(set.data)) {
-			g = 0
+		grpIdx += 1 // carousel through all groups
+		if grpIdx >= uint64(len(set.group)) {
+			grpIdx = 0
 		}
 	}
 }
 
-// Delete attempts to remove |key|, returns true successful.
-func (set *Set[K]) Delete(key K) (ok bool) {
-	hash := set.hash.Hash(key)
+// Remove attempts to remove |element|, returns true if the |element| was in the |Set|
+func (set *Set[K]) Remove(element K) (ok bool) {
+	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := hash & 0x0000_0000_0000_007f
-	g := H1 % uint64(len(set.data))
-
+	grpIdx := H1 % uint64(len(set.group))
 	for {
-		matches := metaMatchH2_64(&set.data[g].ctrl, H2)
+		ctrl := &(set.group[grpIdx].ctrl)
+		slot := &(set.group[grpIdx].slot)
+		matches := metaMatchH2_64(ctrl, H2)
 		for matches != 0 {
 			s := nextMatch_64(&matches)
-			if key == set.data[g].slots[s] {
+			if element == slot[s] {
 				ok = true
 				// optimization: if |m.ctrl[g]| contains any empty
 				// metadata bytes, we can physically delete |key|
@@ -181,28 +157,28 @@ func (set *Set[K]) Delete(key K) (ok bool) {
 				// would already be terminated by the existing empty
 				// slot, and therefore reclaiming slot |s| will not
 				// cause premature termination of probes into |g|.
-				if metaMatchEmpty_64(&set.data[g].ctrl) != 0 {
-					set.data[g].ctrl[s] = kEmpty
+				if metaMatchEmpty_64(ctrl) != 0 {
+					ctrl[s] = kEmpty
 					set.resident--
 				} else {
-					set.data[g].ctrl[s] = kDeleted
+					ctrl[s] = kDeleted
 					set.dead++
 				}
 				var k K
-				set.data[g].slots[s] = k
+				slot[s] = k
 				return
 			}
 		}
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = metaMatchEmpty_64(&set.data[g].ctrl)
+		matches = metaMatchEmpty_64(ctrl)
 		if matches != 0 { // |key| absent
 			ok = false
 			return
 		}
-		g += 1 // linear probing
-		if g >= uint64(len(set.data)) {
-			g = 0
+		grpIdx += 1 // linear probing
+		if grpIdx >= uint64(len(set.group)) {
+			grpIdx = 0
 		}
 	}
 }
@@ -212,26 +188,27 @@ func (set *Set[K]) Delete(key K) (ok bool) {
 // for un-mutated Maps, every key will be visited once. If the Map is
 // Mutated during iteration, mutations will be reflected on return from
 // Iter, but the set of keys visited by Iter is non-deterministic.
-func (set *Set[K]) Iter(cb func(k K) (stop bool)) {
+func (set *Set[K]) Iter(callBack func(element K) (stop bool)) {
 	// take a consistent view of the table in case
 	// we rehash during iteration
-	//ctrl, groups := set.ctrl, set.slots
-	data := set.data
+	data := set.group
 	// pick a random starting group
-	g := randIntN(len(data))
+	grpIdx := randIntN(len(data))
 	for n := 0; n < len(data); n++ {
-		for s, c := range data[g].ctrl {
-			if c == kEmpty || c == kDeleted {
+		ctrl := &(set.group[grpIdx].ctrl)
+		slot := &(set.group[grpIdx].slot)
+		for i, ctrlByte := range ctrl {
+			if ctrlByte == kEmpty || ctrlByte == kDeleted {
 				continue
 			}
-			k := data[g].slots[s]
-			if stop := cb(k); stop {
+			k := slot[i]
+			if stop := callBack(k); stop {
 				return
 			}
 		}
-		g++
-		if g >= uint32(len(data)) {
-			g = 0
+		grpIdx++
+		if grpIdx >= uint32(len(data)) {
+			grpIdx = 0
 		}
 	}
 }
@@ -239,11 +216,11 @@ func (set *Set[K]) Iter(cb func(k K) (stop bool)) {
 // Clear removes all elements from the Map.
 func (set *Set[K]) Clear() {
 	var k K
-	for grpidx := range len(set.data) {
-		d := &(set.data[grpidx])
+	for grpidx := range len(set.group) {
+		d := &(set.group[grpidx])
 		for j := range groupSize {
 			d.ctrl[j] = kEmpty
-			d.slots[j] = k
+			d.slot[j] = k
 		}
 	}
 	set.resident, set.dead = 0, 0
@@ -257,20 +234,20 @@ func (set *Set[K]) Count() int {
 // Capacity returns the number of additional elements
 // the can be added to the Map before resizing.
 func (set *Set[K]) Capacity() int {
-	return int(set.limit - set.resident)
+	return int(set.elementLimit - set.resident)
 }
 
 // find returns the location of |key| if present, or its insertion location if absent.
 // for performance, find is manually inlined into public methods.
 func (set *Set[K]) find(key K) (g, s uint64, ok bool) {
 	//g = probeStart2(hi, len(set.data))
-	hash := set.hash.Hash(key)
+	hash := set.hashFunction.Hash(key)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := hash & 0x0000_0000_0000_007f
-	g = H1 % uint64(len(set.data))
+	g = H1 % uint64(len(set.group))
 	for {
-		ctrl := &set.data[g].ctrl
-		slot := &set.data[g].slots
+		ctrl := &set.group[g].ctrl
+		slot := &set.group[g].slot
 		matches := metaMatchH2_64(ctrl, H2)
 		for matches != 0 {
 			s = nextMatch_64(&matches)
@@ -286,54 +263,45 @@ func (set *Set[K]) find(key K) (g, s uint64, ok bool) {
 			return g, s, false
 		}
 		g += 1 // linear probing
-		if g >= uint64(len(set.data)) {
+		if g >= uint64(len(set.group)) {
 			g = 0
 		}
 	}
 }
 
 func (set *Set[K]) nextSize() (n uint32) {
-	n = uint32(len(set.data)) * 2
+	n = uint32(len(set.group)) * 2
 	if set.dead >= (set.resident / 2) {
-		n = uint32(len(set.data))
+		n = uint32(len(set.group))
 	}
 	return
 }
 
 func (set *Set[K]) rehash(n uint32) {
 	//groups, ctrl := set.slots, set.ctrl
-	data := set.data
-	//set.slots = make([]slot[K], n)
-	//set.ctrl = make([]metadata, n)
-	set.data = make([]Group[K], n)
-	//for i := range set.ctrl {
-	//	set.ctrl[i] = newEmptyMetadata()
-	//}
-	for i := range set.data {
+	old_groups := set.group
+	set.hashFunction = maphash.NewSeed(set.hashFunction)
+	set.elementLimit = n * maxAvgGroupLoad
+	set.resident, set.dead = 0, 0
+	set.group = make([]Group[K], n)
+	for i := range len(set.group) {
+		group := &set.group[i]
 		for j := range groupSize {
-			set.data[i].ctrl[j] = kEmpty
+			group.ctrl[j] = kEmpty
 		}
 	}
-	set.hash = maphash.NewSeed(set.hash)
-	set.limit = n * maxAvgGroupLoad
-	set.resident, set.dead = 0, 0
-	//for g := range ctrl {
-	for _, g := range data {
+	for _, old_grp := range old_groups {
 		for s := range groupSize {
-			c := g.ctrl[s]
+			c := old_grp.ctrl[s]
 			if c == kEmpty || c == kDeleted {
 				continue
 			}
-			set.Put(g.slots[s])
+			set.Add(old_grp.slot[s])
 		}
 	}
 }
 
 func (set *Set[K]) loadFactor() float32 {
-	slots := float32(len(set.data) * groupSize)
+	slots := float32(len(set.group) * groupSize)
 	return float32(set.resident-set.dead) / slots
-}
-
-func probeStart2(hi h1, groups int) uint32 {
-	return uint32(uint64(hi) % uint64(groups))
 }

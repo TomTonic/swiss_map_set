@@ -102,16 +102,16 @@ func benchmarkSwissSet[K comparable](b *testing.B, keys []K) {
 	require.Equal(b, 1, bits.OnesCount32(n))
 	m := NewSet[K](n)
 	for _, k := range keys {
-		m.Put(k)
+		m.Add(k)
 	}
 	b.ResetTimer()
 	var ok bool
 	for i := 0; i < b.N; i++ {
-		ok = m.Has(keys[uint32(i)&mod])
+		ok = m.Contains(keys[uint32(i)&mod])
 	}
 	//	assert.True(b, ok)
 	for i := b.N; i < b.N*2; i++ {
-		ok = m.Has(keys[uint32(i-b.N)&mod])
+		ok = m.Contains(keys[uint32(i-b.N)&mod])
 	}
 	assert.True(b, ok)
 	b.ReportAllocs()

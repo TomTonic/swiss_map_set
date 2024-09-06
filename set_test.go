@@ -133,16 +133,16 @@ func testSetPut[K comparable](t *testing.T, keys []K) {
 	m := NewSet[K](uint32(len(keys)))
 	assert.Equal(t, 0, m.Count())
 	for _, key := range keys {
-		m.Put(key)
+		m.Add(key)
 	}
 	assert.Equal(t, len(keys), m.Count())
 	// overwrite
 	for _, key := range keys {
-		m.Put(key)
+		m.Add(key)
 	}
 	assert.Equal(t, len(keys), m.Count())
 	for _, key := range keys {
-		ok := m.Has(key)
+		ok := m.Contains(key)
 		assert.True(t, ok)
 	}
 	assert.Equal(t, len(keys), int(m.resident))
@@ -151,10 +151,10 @@ func testSetPut[K comparable](t *testing.T, keys []K) {
 func testSetHas[K comparable](t *testing.T, keys []K) {
 	m := NewSet[K](uint32(len(keys)))
 	for _, key := range keys {
-		m.Put(key)
+		m.Add(key)
 	}
 	for _, key := range keys {
-		ok := m.Has(key)
+		ok := m.Contains(key)
 		assert.True(t, ok)
 	}
 }
@@ -163,18 +163,18 @@ func testSetDelete[K comparable](t *testing.T, keys []K) {
 	m := NewSet[K](uint32(len(keys)))
 	assert.Equal(t, 0, m.Count())
 	for _, key := range keys {
-		m.Put(key)
+		m.Add(key)
 	}
 	assert.Equal(t, len(keys), m.Count())
 	for _, key := range keys {
-		m.Delete(key)
-		ok := m.Has(key)
+		m.Remove(key)
+		ok := m.Contains(key)
 		assert.False(t, ok)
 	}
 	assert.Equal(t, 0, m.Count())
 	// put keys back after deleting them
 	for _, key := range keys {
-		m.Put(key)
+		m.Add(key)
 	}
 	assert.Equal(t, len(keys), m.Count())
 }
@@ -183,13 +183,13 @@ func testSetClear[K comparable](t *testing.T, keys []K) {
 	m := NewSet[K](0)
 	assert.Equal(t, 0, m.Count())
 	for _, key := range keys {
-		m.Put(key)
+		m.Add(key)
 	}
 	assert.Equal(t, len(keys), m.Count())
 	m.Clear()
 	assert.Equal(t, 0, m.Count())
 	for _, key := range keys {
-		ok := m.Has(key)
+		ok := m.Contains(key)
 		assert.False(t, ok)
 	}
 	var calls int
@@ -201,8 +201,8 @@ func testSetClear[K comparable](t *testing.T, keys []K) {
 
 	// Assert that the Set was actually cleared...
 	var k K
-	for _, d := range m.data {
-		g := d.slots
+	for _, d := range m.group {
+		g := d.slot
 		for i := range g {
 			assert.Equal(t, k, g[i])
 		}
@@ -212,7 +212,7 @@ func testSetClear[K comparable](t *testing.T, keys []K) {
 func testSetIter[K comparable](t *testing.T, keys []K) {
 	m := NewSet[K](uint32(len(keys)))
 	for _, key := range keys {
-		m.Put(key)
+		m.Add(key)
 	}
 	visited := make(map[K]uint, len(keys))
 	m.Iter(func(k K) (stop bool) {
@@ -237,11 +237,11 @@ func testSetIter[K comparable](t *testing.T, keys []K) {
 	}
 	// mutate on iter
 	m.Iter(func(k K) (stop bool) {
-		m.Put(k)
+		m.Add(k)
 		return
 	})
 	for _, key := range keys {
-		ok := m.Has(key)
+		ok := m.Contains(key)
 		assert.True(t, ok)
 	}
 }
@@ -250,10 +250,10 @@ func testSetGrow[K comparable](t *testing.T, keys []K) {
 	n := uint32(len(keys))
 	m := NewSet[K](n / 10)
 	for _, key := range keys {
-		m.Put(key)
+		m.Add(key)
 	}
 	for _, key := range keys {
-		ok := m.Has(key)
+		ok := m.Contains(key)
 		assert.True(t, ok)
 	}
 }
@@ -277,7 +277,7 @@ func testSwissSetCapacity[K comparable](t *testing.T, gen func(n int) []K) {
 		assert.Equal(t, int(c), m.Capacity())
 		keys := gen(rand.Intn(int(c)))
 		for _, k := range keys {
-			m.Put(k)
+			m.Add(k)
 		}
 		assert.Equal(t, int(c)-len(keys), m.Capacity())
 		assert.Equal(t, int(c), m.Count()+m.Capacity())
@@ -290,7 +290,7 @@ func testProbeStatsSet[K comparable](t *testing.T, keys []K) {
 		sz, k := loadFactorSample(n, load)
 		m := NewSet[K](sz)
 		for _, key := range keys[:k] {
-			m.Put(key)
+			m.Add(key)
 		}
 		// todo: assert stat invariants?
 		stats := getProbeStatsSet(t, m, keys)
@@ -345,11 +345,11 @@ func testProbeStatsSet[K comparable](t *testing.T, keys []K) {
 */
 func getProbeLengthSet[K comparable](t *testing.T, m *Set[K], key K) (length uint32, ok bool) {
 	var end uint64
-	hi, _ := splitHash(m.hash.Hash(key))
-	start := uint64(probeStart(hi, len(m.data)))
+	hi, _ := splitHash(m.hashFunction.Hash(key))
+	start := uint64(probeStart(hi, len(m.group)))
 	end, _, ok = m.find(key)
 	if end < start { // wrapped
-		end += uint64(len(m.data))
+		end += uint64(len(m.group))
 	}
 	length = uint32((end - start) + 1)
 	require.True(t, length > 0)
@@ -357,7 +357,7 @@ func getProbeLengthSet[K comparable](t *testing.T, m *Set[K], key K) (length uin
 }
 
 func getProbeStatsSet[K comparable](t *testing.T, m *Set[K], keys []K) (stats probeStats) {
-	stats.groups = uint32(len(m.data))
+	stats.groups = uint32(len(m.group))
 	stats.loadFactor = m.loadFactor()
 	var presentSum, absentSum float32
 	stats.presentMin = math.MaxInt32

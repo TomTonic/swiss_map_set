@@ -55,38 +55,38 @@ func fuzzTestStringSet(t *testing.T, keySz, init, count uint32) {
 	keys := genStringData(int(keySz), int(count))
 	golden := make(map[string]int, init)
 	for i, k := range keys {
-		m.Put(k)
+		m.Add(k)
 		golden[k] = i
 	}
 	assert.Equal(t, len(golden), m.Count())
 
 	for k, _ := range golden {
-		ok := m.Has(k)
+		ok := m.Contains(k)
 		assert.True(t, ok)
 	}
 	for _, k := range keys {
 		_, ok := golden[k]
 		assert.True(t, ok)
-		assert.True(t, m.Has(k))
+		assert.True(t, m.Contains(k))
 	}
 
 	deletes := keys[:count/2]
 	for _, k := range deletes {
 		delete(golden, k)
-		m.Delete(k)
+		m.Remove(k)
 	}
 	assert.Equal(t, len(golden), m.Count())
 
 	for _, k := range deletes {
-		assert.False(t, m.Has(k))
+		assert.False(t, m.Contains(k))
 	}
 	for k, _ := range golden {
-		ok := m.Has(k)
+		ok := m.Contains(k)
 		assert.True(t, ok)
 	}
 }
 
 func setConstSeedSet[K comparable](set *Set[K], seed uintptr) {
-	h := (*hasher)((unsafe.Pointer)(&set.hash))
+	h := (*hasher)((unsafe.Pointer)(&set.hashFunction))
 	h.seed = seed
 }
