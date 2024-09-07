@@ -41,7 +41,7 @@ func BenchmarkStringSets(b *testing.B) {
 }
 
 func BenchmarkInt64Sets(b *testing.B) {
-	sizes := []int{16, 128, 1024, 8192, 131072}
+	sizes := []int{16, 128, 1024, 8192, 131072, 524288}
 	for _, n := range sizes {
 		b.Run("n="+strconv.Itoa(n), func(b *testing.B) {
 			keys := generateInt64Data(n)

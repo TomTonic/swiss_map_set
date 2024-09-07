@@ -56,13 +56,13 @@ func castUint64(m *metadata) uint64 {
 
 // ---
 
-func metaMatchH2_64(m *metadata, h uint64) uint64 {
+func metaMatchH2_64(m *[groupSize]int8, h uint64) uint64 {
 	// https://graphics.stanford.edu/~seander/bithacks.html##ValueInWord
-	return hasZeroByte_64(castUint64(m) ^ (loBits * uint64(h)))
+	return hasZeroByte_64(myCastUint64(m) ^ (loBits * uint64(h)))
 }
 
-func metaMatchEmpty_64(m *metadata) uint64 {
-	return hasZeroByte_64(castUint64(m) ^ hiBits)
+func metaMatchEmpty_64(m *[groupSize]int8) uint64 {
+	return hasZeroByte_64(myCastUint64(m) ^ hiBits)
 }
 
 func nextMatch_64(b *uint64) uint64 {
@@ -73,4 +73,8 @@ func nextMatch_64(b *uint64) uint64 {
 
 func hasZeroByte_64(x uint64) uint64 {
 	return ((x - loBits) & ^(x)) & hiBits
+}
+
+func myCastUint64(m *[groupSize]int8) uint64 {
+	return *(*uint64)((unsafe.Pointer)(m))
 }

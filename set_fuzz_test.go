@@ -60,7 +60,7 @@ func fuzzTestStringSet(t *testing.T, keySz, init, count uint32) {
 	}
 	assert.Equal(t, len(golden), m.Count())
 
-	for k, _ := range golden {
+	for k := range golden {
 		ok := m.Contains(k)
 		assert.True(t, ok)
 	}
@@ -80,7 +80,7 @@ func fuzzTestStringSet(t *testing.T, keySz, init, count uint32) {
 	for _, k := range deletes {
 		assert.False(t, m.Contains(k))
 	}
-	for k, _ := range golden {
+	for k := range golden {
 		ok := m.Contains(k)
 		assert.True(t, ok)
 	}
