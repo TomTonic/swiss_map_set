@@ -226,54 +226,49 @@ func (set *Set[K]) Add2(element K) {
 }
 
 // Remove attempts to remove |element|, returns true if the |element| was in the |Set|
-func (set *Set[K]) Remove(element K) (ok bool) {
+func (set *Set[K]) Remove(element K) bool {
 	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := hash & 0x0000_0000_0000_007f
+	H2 := int64(hash & 0x0000_0000_0000_007f)
 	grpIdx := H1 % uint64(len(set.group))
+	grpCnt := uint64(len(set.group))
 	for {
 		ctrl := &(set.group[grpIdx].ctrl)
 		slot := &(set.group[grpIdx].slot)
-		matches := metaMatchH2_64(ctrl, H2)
+		matches := ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
-			var bitmask uint64 = 1
-			// find first match
-			for i := 0; i < groupSize; i++ {
-				if (matches & bitmask) != 0 {
-					if element == slot[i] {
-						ok = true
-						// optimization: if |m.ctrl[g]| contains any empty
-						// metadata bytes, we can physically delete |key|
-						// rather than placing a tombstone.
-						// The observation is that any probes into group |g|
-						// would already be terminated by the existing empty
-						// slot, and therefore reclaiming slot |s| will not
-						// cause premature termination of probes into |g|.
-						if metaMatchEmpty_64(ctrl) != 0 {
-							ctrl[i] = kEmpty
-							set.resident--
-						} else {
-							ctrl[i] = kDeleted
-							set.dead++
-						}
-						var k K
-						slot[i] = k
-						return
-					}
+			s := nextMatch_32(&matches)
+			if element == slot[s] {
+				// found - already in Set, just return
+				// optimization: if |m.ctrl[g]| contains any empty
+				// metadata bytes, we can physically delete |element|
+				// rather than placing a tombstone.
+				// The observation is that any probes into group |g|
+				// would already be terminated by the existing empty
+				// slot, and therefore reclaiming slot |s| will not
+				// cause premature termination of probes into |g|.
+				if ctlrMatchEmpty(ctrl) != 0 {
+					ctrl[s] = kEmpty
+					set.resident--
+				} else {
+					ctrl[s] = kDeleted
+					set.dead++
 				}
-				bitmask <<= 1
+				var k K
+				slot[s] = k
+				return true
 			}
 		}
 
-		// |key| is not in group |g|,
+		// |element| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = metaMatchEmpty_64(ctrl)
-		if matches != 0 { // |key| absent
-			ok = false
-			return
+		matches = ctlrMatchEmpty(ctrl)
+		if matches != 0 {
+			// |element| absent
+			return false
 		}
 		grpIdx += 1 // linear probing
-		if grpIdx >= uint64(len(set.group)) {
+		if grpIdx >= grpCnt {
 			grpIdx = 0
 		}
 	}
