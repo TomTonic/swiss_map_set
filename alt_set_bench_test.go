@@ -54,14 +54,14 @@ func Algorithm2(resultSet *Set[uint32], searchElements []uint32) {
 }
 
 func BenchmarkAlgorithm1(b *testing.B) {
-	resultSet, searchElements := prepareDataUint32(10, 5000, 50000, 0.99)
+	resultSet, searchElements := prepareDataUint32(10, 5000, 8000, 0.3)
 	for i := 0; i < b.N; i++ {
 		Algorithm1(resultSet, searchElements)
 	}
 }
 
 func BenchmarkAlgorithm2(b *testing.B) {
-	resultSet, searchElements := prepareDataUint32(10, 5000, 50000, 0.99)
+	resultSet, searchElements := prepareDataUint32(10, 5000, 8000, 0.3)
 	for i := 0; i < b.N; i++ {
 		Algorithm2(resultSet, searchElements)
 	}

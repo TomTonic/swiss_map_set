@@ -137,6 +137,49 @@ func (set *Set[K]) Add(element K) {
 	}
 	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
+	H2 := int64(hash & 0x0000_0000_0000_007f)
+	grpIdx := H1 % uint64(len(set.group))
+	grpCnt := uint64(len(set.group))
+	for {
+		ctrl := &(set.group[grpIdx].ctrl)
+		slot := &(set.group[grpIdx].slot)
+
+		matches := ctlrMatchH2(ctrl, H2)
+		for matches != 0 {
+			s := nextMatch_32(&matches)
+			if element == slot[s] {
+				// found - already in Set, just return
+				return
+			}
+		}
+
+		// |key| is not in group |g|,
+		// stop probing if we see an empty slot
+		matches = ctlrMatchEmpty(ctrl)
+
+		if matches != 0 {
+			// empty spot -> element can't be in Set (see Contains) -> insert
+			s := nextMatch_32(&matches)
+			ctrl[s] = int8(H2)
+			slot[s] = element
+			set.resident++
+			return
+
+		}
+		grpIdx += 1 // carousel through all groups
+		if grpIdx >= grpCnt {
+			grpIdx = 0
+		}
+	}
+}
+
+// Add attempts to insert |key| and |value|
+func (set *Set[K]) Add2(element K) {
+	if set.resident >= set.elementLimit {
+		set.rehash(set.nextSize())
+	}
+	hash := set.hashFunction.Hash(element)
+	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := hash & 0x0000_0000_0000_007f
 	grpIdx := H1 % uint64(len(set.group))
 	for {
