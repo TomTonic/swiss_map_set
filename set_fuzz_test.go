@@ -86,6 +86,11 @@ func fuzzTestStringSet(t *testing.T, keySz, init, count uint32) {
 	}
 }
 
+type hasher struct {
+	hash func()
+	seed uintptr
+}
+
 func setConstSeedSet[K comparable](set *Set[K], seed uintptr) {
 	h := (*hasher)((unsafe.Pointer)(&set.hashFunction))
 	h.seed = seed

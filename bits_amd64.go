@@ -28,55 +28,17 @@ const (
 	maxAvgGroupLoad = 14
 )
 
-type bitset uint16
-
-func metaMatchH2(m *metadata, h h2) bitset {
-	b := simd.MatchMetadata((*[16]int8)(m), int8(h))
-	return bitset(b)
-}
-
-func metaMatchEmpty(m *metadata) bitset {
-	b := simd.MatchMetadata((*[16]int8)(m), empty)
-	return bitset(b)
-}
-
-func nextMatch(b *bitset) (s uint32) {
-	s = uint32(bits.TrailingZeros16(uint16(*b)))
-	*b &= ^(1 << s) // clear bit |s|
-	return
-}
-
-//---
-
-func metaMatchH2_64(m *[16]int8, h uint64) uint64 {
-	b := simd.MatchMetadata((m), int8(h))
-	return uint64(b)
-}
-
-func metaMatchEmpty_64(m *[16]int8) uint64 {
-	b := simd.MatchMetadata(m, kEmpty)
-	return uint64(b)
-}
-
-func nextMatch_64(b *uint64) (s uint64) {
-	s = uint64(bits.TrailingZeros16(uint16(*b)))
-	*b &= ^(1 << s) // clear bit |s|
-	return
-}
-
-// ---
-
-func ctlrMatchH2(m *[16]int8, h int64) int32 {
+func ctlrMatchH2(m *[16]int8, h uint64) uint64 {
 	b := simd.MatchCRTLhash(m, h)
 	return b
 }
 
-func ctlrMatchEmpty(m *[16]int8) int32 {
+func ctlrMatchEmpty(m *[16]int8) uint64 {
 	b := simd.MatchCRTLempty(m)
 	return b
 }
 
-func nextMatch_32(b *int32) (s int) {
+func nextMatch(b *uint64) (s int) {
 	s = bits.TrailingZeros16(uint16(*b))
 	*b &= ^(1 << s) // clear bit |s|
 	return

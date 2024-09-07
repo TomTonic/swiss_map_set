@@ -15,7 +15,13 @@
 package swiss
 
 import (
+	"math/rand/v2"
+
 	"github.com/dolthub/maphash"
+)
+
+const (
+	maxLoadFactor = float32(maxAvgGroupLoad) / float32(groupSize)
 )
 
 // Set is an open-addressing set
@@ -27,13 +33,6 @@ type Set[K comparable] struct {
 	elementLimit uint32
 	group        []Group[K]
 }
-
-// metadata is the h2 metadata array for a group.
-// find operations first probe the controls bytes
-// to filter candidates before matching keys
-//type metadata [groupSize]int8
-
-// group is a group of 16 keys
 
 type Group[K comparable] struct {
 	ctrl [groupSize]int8
@@ -68,7 +67,7 @@ func NewSet[K comparable](sz uint32) (s *Set[K]) {
 func (set *Set[K]) Contains(element K) bool {
 	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := int64(hash & 0x0000_0000_0000_007f)
+	H2 := (hash & 0x0000_0000_0000_007f)
 	grpIdx := H1 % uint64(len(set.group))
 	grpCnt := uint64(len(set.group))
 	for {
@@ -76,7 +75,7 @@ func (set *Set[K]) Contains(element K) bool {
 		slot := &(set.group[grpIdx].slot)
 		matches := ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
-			s := nextMatch_32(&matches)
+			s := nextMatch(&matches)
 			if element == slot[s] {
 				return true
 			}
@@ -84,39 +83,6 @@ func (set *Set[K]) Contains(element K) bool {
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
 		matches = ctlrMatchEmpty(ctrl)
-		if matches != 0 {
-			// there is an empty slot - the element, if it had been added, hat either
-			// been found until now or it had been added in the next empty spot -
-			// well, this is the next empty spot...
-			return false
-		}
-		grpIdx += 1 // carousel through all groups
-		if grpIdx >= grpCnt {
-			grpIdx = 0
-		}
-	}
-}
-
-// Contains returns true if |element| is present in the |Set|.
-func (set *Set[K]) Contains2(element K) bool {
-	hash := set.hashFunction.Hash(element)
-	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := hash & 0x0000_0000_0000_007f
-	grpIdx := H1 % uint64(len(set.group))
-	grpCnt := uint64(len(set.group))
-	for {
-		ctrl := &(set.group[grpIdx].ctrl)
-		slot := &(set.group[grpIdx].slot)
-		matches := metaMatchH2_64(ctrl, H2)
-		for matches != 0 {
-			s := nextMatch_64(&matches)
-			if element == slot[s] {
-				return true
-			}
-		}
-		// |key| is not in group |g|,
-		// stop probing if we see an empty slot
-		matches = metaMatchEmpty_64(ctrl)
 		if matches != 0 {
 			// there is an empty slot - the element, if it had been added, hat either
 			// been found until now or it had been added in the next empty spot -
@@ -137,7 +103,7 @@ func (set *Set[K]) Add(element K) {
 	}
 	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := int64(hash & 0x0000_0000_0000_007f)
+	H2 := (hash & 0x0000_0000_0000_007f)
 	grpIdx := H1 % uint64(len(set.group))
 	grpCnt := uint64(len(set.group))
 	for {
@@ -146,7 +112,7 @@ func (set *Set[K]) Add(element K) {
 
 		matches := ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
-			s := nextMatch_32(&matches)
+			s := nextMatch(&matches)
 			if element == slot[s] {
 				// found - already in Set, just return
 				return
@@ -159,7 +125,7 @@ func (set *Set[K]) Add(element K) {
 
 		if matches != 0 {
 			// empty spot -> element can't be in Set (see Contains) -> insert
-			s := nextMatch_32(&matches)
+			s := nextMatch(&matches)
 			ctrl[s] = int8(H2)
 			slot[s] = element
 			set.resident++
@@ -177,7 +143,7 @@ func (set *Set[K]) Add(element K) {
 func (set *Set[K]) Remove(element K) bool {
 	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := int64(hash & 0x0000_0000_0000_007f)
+	H2 := (hash & 0x0000_0000_0000_007f)
 	grpIdx := H1 % uint64(len(set.group))
 	grpCnt := uint64(len(set.group))
 	for {
@@ -185,7 +151,7 @@ func (set *Set[K]) Remove(element K) bool {
 		slot := &(set.group[grpIdx].slot)
 		matches := ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
-			s := nextMatch_32(&matches)
+			s := nextMatch(&matches)
 			if element == slot[s] {
 				// found - already in Set, just return
 				// optimization: if |m.ctrl[g]| contains any empty
@@ -232,7 +198,7 @@ func (set *Set[K]) Iter(callBack func(element K) (stop bool)) {
 	// we rehash during iteration
 	data := set.group
 	// pick a random starting group
-	grpIdx := randIntN(len(data))
+	grpIdx := rand.Uint32N(uint32(len(data)))
 	for n := 0; n < len(data); n++ {
 		ctrl := &(data[grpIdx].ctrl)
 		slot := &(data[grpIdx].slot)
@@ -278,7 +244,7 @@ func (set *Set[K]) Capacity() int {
 
 // find returns the location of |key| if present, or its insertion location if absent.
 // for performance, find is manually inlined into public methods.
-func (set *Set[K]) find(key K) (g, s uint64, ok bool) {
+func (set *Set[K]) find(key K) (g uint64, s int, ok bool) {
 	//g = probeStart2(hi, len(set.data))
 	hash := set.hashFunction.Hash(key)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
@@ -287,18 +253,18 @@ func (set *Set[K]) find(key K) (g, s uint64, ok bool) {
 	for {
 		ctrl := &set.group[g].ctrl
 		slot := &set.group[g].slot
-		matches := metaMatchH2_64(ctrl, H2)
+		matches := ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
-			s = nextMatch_64(&matches)
+			s = nextMatch(&matches)
 			if key == slot[s] {
 				return g, s, true
 			}
 		}
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = metaMatchEmpty_64(ctrl)
+		matches = ctlrMatchEmpty(ctrl)
 		if matches != 0 {
-			s = nextMatch_64(&matches)
+			s = nextMatch(&matches)
 			return g, s, false
 		}
 		g += 1 // linear probing
@@ -356,7 +322,7 @@ func (set *Set[K]) rehash(n uint32) {
 
 				if matches != 0 {
 					// empty spot -> element can't be in Set (see Contains) -> insert
-					s := nextMatch_32(&matches)
+					s := nextMatch(&matches)
 					ctrl[s] = int8(H2)
 					slot[s] = element
 					set.resident++
@@ -375,4 +341,13 @@ func (set *Set[K]) rehash(n uint32) {
 func (set *Set[K]) loadFactor() float32 {
 	slots := float32(len(set.group) * groupSize)
 	return float32(set.resident-set.dead) / slots
+}
+
+// numGroups returns the minimum number of groups needed to store |n| elems.
+func numGroups(n uint32) (groups uint32) {
+	groups = (n + maxAvgGroupLoad - 1) / maxAvgGroupLoad
+	if groups == 0 {
+		groups = 1
+	}
+	return
 }

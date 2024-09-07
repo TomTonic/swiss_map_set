@@ -16,6 +16,7 @@ package swiss
 
 import (
 	"math/bits"
+	"math/rand"
 	"strconv"
 	"testing"
 
@@ -115,4 +116,21 @@ func benchmarkSwissSet[K comparable](b *testing.B, keys []K) {
 	}
 	assert.True(b, ok)
 	b.ReportAllocs()
+}
+
+func generateInt64Data(n int) (data []int64) {
+	data = make([]int64, n)
+	var x int64
+	for i := range data {
+		x += rand.Int63n(128) + 1
+		data[i] = x
+	}
+	return
+}
+
+func mean(samples []float64) (m float64) {
+	for _, s := range samples {
+		m += s
+	}
+	return m / float64(len(samples))
 }

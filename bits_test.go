@@ -16,7 +16,6 @@ package swiss
 
 import (
 	"math/bits"
-	"math/rand"
 	"testing"
 	"unsafe"
 
@@ -24,53 +23,55 @@ import (
 )
 
 func TestMatchMetadata(t *testing.T) {
-	var meta metadata
+	var meta [groupSize]int8
 	for i := range meta {
 		meta[i] = int8(i)
 	}
 	t.Run("metaMatchH2", func(t *testing.T) {
 		for _, x := range meta {
-			mask := metaMatchH2(&meta, h2(x))
+			mask := ctlrMatchH2(&meta, (uint64(x) & 0x0000_0000_0000_007f))
 			assert.NotZero(t, mask)
-			assert.Equal(t, uint32(x), nextMatch(&mask))
+			assert.Equal(t, int(x), nextMatch(&mask))
 		}
 	})
 	t.Run("metaMatchEmpty", func(t *testing.T) {
-		mask := metaMatchEmpty(&meta)
-		assert.Equal(t, mask, bitset(0))
+		mask := ctlrMatchEmpty(&meta)
+		assert.Equal(t, mask, uint64(0))
 		for i := range meta {
-			meta[i] = empty
-			mask = metaMatchEmpty(&meta)
+			meta[i] = kEmpty
+			mask = ctlrMatchEmpty(&meta)
 			assert.NotZero(t, mask)
-			assert.Equal(t, uint32(i), nextMatch(&mask))
+			assert.Equal(t, int(i), nextMatch(&mask))
 			meta[i] = int8(i)
 		}
 	})
 	t.Run("nextMatch", func(t *testing.T) {
 		// test iterating multiple matches
-		meta = newEmptyMetadata()
-		mask := metaMatchEmpty(&meta)
+		for j := range groupSize {
+			meta[j] = kEmpty
+		}
+		mask := ctlrMatchEmpty(&meta)
 		for i := range meta {
-			assert.Equal(t, uint32(i), nextMatch(&mask))
+			assert.Equal(t, int(i), nextMatch(&mask))
 		}
 		for i := 0; i < len(meta); i += 2 {
 			meta[i] = int8(42)
 		}
-		mask = metaMatchH2(&meta, h2(42))
+		mask = ctlrMatchH2(&meta, (uint64(42) & 0x0000_0000_0000_007f))
 		for i := 0; i < len(meta); i += 2 {
-			assert.Equal(t, uint32(i), nextMatch(&mask))
+			assert.Equal(t, int(i), nextMatch(&mask))
 		}
 	})
 }
 
 func BenchmarkMatchMetadata(b *testing.B) {
-	var meta metadata
+	var meta [groupSize]int8
 	for i := range meta {
 		meta[i] = int8(i)
 	}
-	var mask bitset
+	var mask uint64
 	for i := 0; i < b.N; i++ {
-		mask = metaMatchH2(&meta, h2(i))
+		mask = ctlrMatchH2(&meta, (uint64(i) & 0x0000_0000_0000_007f))
 	}
 	b.Log(mask)
 }
@@ -90,35 +91,13 @@ func nextPow2(x uint32) uint32 {
 }
 
 func TestConstants(t *testing.T) {
-	c1, c2 := empty, tombstone
+	c1, c2 := kEmpty, kDeleted
 	assert.Equal(t, byte(0b1000_0000), byte(c1))
-	assert.Equal(t, byte(0b1000_0000), reinterpretCast(c1))
+	assert.Equal(t, byte(0b1000_0000), reinterpretCast(int8(c1)))
 	assert.Equal(t, byte(0b1111_1110), byte(c2))
-	assert.Equal(t, byte(0b1111_1110), reinterpretCast(c2))
+	assert.Equal(t, byte(0b1111_1110), reinterpretCast(int8(c2)))
 }
 
 func reinterpretCast(i int8) byte {
 	return *(*byte)(unsafe.Pointer(&i))
-}
-
-func TestFastMod(t *testing.T) {
-	t.Run("n=10", func(t *testing.T) {
-		testFastMod(t, 10)
-	})
-	t.Run("n=100", func(t *testing.T) {
-		testFastMod(t, 100)
-	})
-	t.Run("n=1000", func(t *testing.T) {
-		testFastMod(t, 1000)
-	})
-}
-
-func testFastMod(t *testing.T, n uint32) {
-	const trials = 32 * 1024
-	for i := 0; i < trials; i++ {
-		x := rand.Uint32()
-		y := fastModN(x, n)
-		assert.Less(t, y, n)
-		t.Logf("fastMod(%d, %d): %d", x, n, y)
-	}
 }

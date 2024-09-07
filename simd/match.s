@@ -18,9 +18,9 @@ TEXT ·MatchMetadata(SB), NOSPLIT, $0-18
 	MOVW     AX, ret+16(FP)
 	RET
 
-// func MatchCRTLhash(ctrl *[16]int8, hash int64) int32
+// func MatchCRTLhash(ctrl *[16]int8, hash uint64) uint64
 // Requires: SSE2, SSSE3
-TEXT ·MatchCRTLhash(SB), NOSPLIT, $0-20
+TEXT ·MatchCRTLhash(SB), NOSPLIT, $0-24
 	MOVQ     ctrl+0(FP), AX
 	MOVQ     hash+8(FP), CX
 	MOVQ     CX, X0
@@ -29,12 +29,12 @@ TEXT ·MatchCRTLhash(SB), NOSPLIT, $0-20
 	MOVOU    (AX), X1
 	PCMPEQB  X1, X0
 	PMOVMSKB X0, AX
-	MOVL     AX, ret+16(FP)
+	MOVQ     AX, ret+16(FP)
 	RET
 
-// func MatchCRTLempty(ctrl *[16]int8) int32
+// func MatchCRTLempty(ctrl *[16]int8) uint64
 // Requires: SSE2, SSSE3
-TEXT ·MatchCRTLempty(SB), NOSPLIT, $0-12
+TEXT ·MatchCRTLempty(SB), NOSPLIT, $0-16
 	MOVQ     ctrl+0(FP), AX
 	MOVQ     $0x00000080, CX
 	MOVQ     CX, X0
@@ -43,12 +43,12 @@ TEXT ·MatchCRTLempty(SB), NOSPLIT, $0-12
 	MOVOU    (AX), X1
 	PCMPEQB  X1, X0
 	PMOVMSKB X0, AX
-	MOVL     AX, ret+8(FP)
+	MOVQ     AX, ret+8(FP)
 	RET
 
-// func MatchCRTLdeleted(ctrl *[16]int8) int32
+// func MatchCRTLdeleted(ctrl *[16]int8) uint64
 // Requires: SSE2, SSSE3
-TEXT ·MatchCRTLdeleted(SB), NOSPLIT, $0-12
+TEXT ·MatchCRTLdeleted(SB), NOSPLIT, $0-16
 	MOVQ     ctrl+0(FP), AX
 	MOVQ     $0x000000fe, CX
 	MOVQ     CX, X0
@@ -57,5 +57,5 @@ TEXT ·MatchCRTLdeleted(SB), NOSPLIT, $0-12
 	MOVOU    (AX), X1
 	PCMPEQB  X1, X0
 	PMOVMSKB X0, AX
-	MOVL     AX, ret+8(FP)
+	MOVQ     AX, ret+8(FP)
 	RET

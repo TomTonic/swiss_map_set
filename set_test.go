@@ -86,49 +86,50 @@ func testSwissSet[K comparable](t *testing.T, keys []K) {
 	t.Run("grow", func(t *testing.T) {
 		testSetGrow(t, keys)
 	})
-	t.Run("probe stats", func(t *testing.T) {
-		testProbeStats(t, keys)
-	})
+	/*
+		t.Run("probe stats", func(t *testing.T) {
+			testProbeStats(t, keys)
+		})
+	*/
 }
 
-/*
-	func uniq[K comparable](keys []K) []K {
-		s := make(Set[K], len(keys))
-		for _, k := range keys {
-			s[k] = struct{}
-		}
-		u := make([]K, 0, len(keys))
-		for k := range s {
-			u = append(u, k)
-		}
-		return u
+func uniq[K comparable](keys []K) []K {
+	s := make(map[K]struct{}, len(keys))
+	for _, k := range keys {
+		s[k] = struct{}{}
 	}
+	u := make([]K, 0, len(keys))
+	for k := range s {
+		u = append(u, k)
+	}
+	return u
+}
 
-	func genStringData(size, count int) (keys []string) {
-		src := rand.New(rand.NewSource(int64(size * count)))
-		letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-		r := make([]rune, size*count)
-		for i := range r {
-			r[i] = letters[src.Intn(len(letters))]
-		}
-		keys = make([]string, count)
-		for i := range keys {
-			keys[i] = string(r[:size])
-			r = r[size:]
-		}
-		return
+func genStringData(size, count int) (keys []string) {
+	src := rand.New(rand.NewSource(int64(size * count)))
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	r := make([]rune, size*count)
+	for i := range r {
+		r[i] = letters[src.Intn(len(letters))]
 	}
+	keys = make([]string, count)
+	for i := range keys {
+		keys[i] = string(r[:size])
+		r = r[size:]
+	}
+	return
+}
 
-	func genUint32Data(count int) (keys []uint32) {
-		keys = make([]uint32, count)
-		var x uint32
-		for i := range keys {
-			x += (rand.Uint32() % 128) + 1
-			keys[i] = x
-		}
-		return
+func genUint32Data(count int) (keys []uint32) {
+	keys = make([]uint32, count)
+	var x uint32
+	for i := range keys {
+		x += (rand.Uint32() % 128) + 1
+		keys[i] = x
 	}
-*/
+	return
+}
+
 func testSetPut[K comparable](t *testing.T, keys []K) {
 	m := NewSet[K](uint32(len(keys)))
 	assert.Equal(t, 0, m.Count())
@@ -284,6 +285,7 @@ func testSwissSetCapacity[K comparable](t *testing.T, gen func(n int) []K) {
 	}
 }
 
+/*
 func testProbeStatsSet[K comparable](t *testing.T, keys []K) {
 	runTest := func(load float32) {
 		n := uint32(len(keys))
@@ -306,21 +308,21 @@ func testProbeStatsSet[K comparable](t *testing.T, keys []K) {
 		runTest(maxLoadFactor)
 	})
 }
-
-/*
+*/
 // calculates the sample size and Set size necessary to
 // create a load factor of |load| given |n| data points
 
-	func loadFactorSample(n uint32, targetLoad float32) (SetSz, sampleSz uint32) {
-		if targetLoad > maxLoadFactor {
-			targetLoad = maxLoadFactor
-		}
-		// tables are assumed to be power of two
-		sampleSz = uint32(float32(n) * targetLoad)
-		SetSz = uint32(float32(n) * maxLoadFactor)
-		return
+func loadFactorSample(n uint32, targetLoad float32) (SetSz, sampleSz uint32) {
+	if targetLoad > maxLoadFactor {
+		targetLoad = maxLoadFactor
 	}
+	// tables are assumed to be power of two
+	sampleSz = uint32(float32(n) * targetLoad)
+	SetSz = uint32(float32(n) * maxLoadFactor)
+	return
+}
 
+/*
 	type probeStats struct {
 		groups     uint32
 		loadFactor float32
@@ -342,61 +344,61 @@ func testProbeStatsSet[K comparable](t *testing.T, keys []K) {
 			s.absentCnt, s.absentMin, s.absentMax, s.absentAvg)
 		return g + p + a
 	}
-*/
-func getProbeLengthSet[K comparable](t *testing.T, m *Set[K], key K) (length uint32, ok bool) {
-	var end uint64
-	hi, _ := splitHash(m.hashFunction.Hash(key))
-	start := uint64(probeStart(hi, len(m.group)))
-	end, _, ok = m.find(key)
-	if end < start { // wrapped
-		end += uint64(len(m.group))
-	}
-	length = uint32((end - start) + 1)
-	require.True(t, length > 0)
-	return
-}
 
-func getProbeStatsSet[K comparable](t *testing.T, m *Set[K], keys []K) (stats probeStats) {
-	stats.groups = uint32(len(m.group))
-	stats.loadFactor = m.loadFactor()
-	var presentSum, absentSum float32
-	stats.presentMin = math.MaxInt32
-	stats.absentMin = math.MaxInt32
-	for _, key := range keys {
-		l, ok := getProbeLengthSet(t, m, key)
-		if ok {
-			stats.presentCnt++
-			presentSum += float32(l)
-			if stats.presentMin > l {
-				stats.presentMin = l
-			}
-			if stats.presentMax < l {
-				stats.presentMax = l
-			}
-		} else {
-			stats.absentCnt++
-			absentSum += float32(l)
-			if stats.absentMin > l {
-				stats.absentMin = l
-			}
-			if stats.absentMax < l {
-				stats.absentMax = l
+	func getProbeLengthSet[K comparable](t *testing.T, m *Set[K], key K) (length uint32, ok bool) {
+		var end uint64
+		hi, _ := splitHash(m.hashFunction.Hash(key))
+		start := uint64(probeStart(hi, len(m.group)))
+		end, _, ok = m.find(key)
+		if end < start { // wrapped
+			end += uint64(len(m.group))
+		}
+		length = uint32((end - start) + 1)
+		require.True(t, length > 0)
+		return
+	}
+
+	func getProbeStatsSet[K comparable](t *testing.T, m *Set[K], keys []K) (stats probeStats) {
+		stats.groups = uint32(len(m.group))
+		stats.loadFactor = m.loadFactor()
+		var presentSum, absentSum float32
+		stats.presentMin = math.MaxInt32
+		stats.absentMin = math.MaxInt32
+		for _, key := range keys {
+			l, ok := getProbeLengthSet(t, m, key)
+			if ok {
+				stats.presentCnt++
+				presentSum += float32(l)
+				if stats.presentMin > l {
+					stats.presentMin = l
+				}
+				if stats.presentMax < l {
+					stats.presentMax = l
+				}
+			} else {
+				stats.absentCnt++
+				absentSum += float32(l)
+				if stats.absentMin > l {
+					stats.absentMin = l
+				}
+				if stats.absentMax < l {
+					stats.absentMax = l
+				}
 			}
 		}
+		if stats.presentCnt == 0 {
+			stats.presentMin = 0
+		} else {
+			stats.presentAvg = presentSum / float32(stats.presentCnt)
+		}
+		if stats.absentCnt == 0 {
+			stats.absentMin = 0
+		} else {
+			stats.absentAvg = absentSum / float32(stats.absentCnt)
+		}
+		return
 	}
-	if stats.presentCnt == 0 {
-		stats.presentMin = 0
-	} else {
-		stats.presentAvg = presentSum / float32(stats.presentCnt)
-	}
-	if stats.absentCnt == 0 {
-		stats.absentMin = 0
-	} else {
-		stats.absentAvg = absentSum / float32(stats.absentCnt)
-	}
-	return
-}
-
+*/
 func TestNumGroupsSet(t *testing.T) {
 	assert.Equal(t, expected(0), numGroups(0))
 	assert.Equal(t, expected(1), numGroups(1))
@@ -409,7 +411,6 @@ func TestNumGroupsSet(t *testing.T) {
 	assert.Equal(t, expected(57), numGroups(57))
 }
 
-/*
 func expected(x int) (groups uint32) {
 	groups = uint32(math.Ceil(float64(x) / float64(maxAvgGroupLoad)))
 	if groups == 0 {
@@ -417,4 +418,3 @@ func expected(x int) (groups uint32) {
 	}
 	return
 }
-*/

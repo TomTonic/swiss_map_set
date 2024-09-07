@@ -43,7 +43,7 @@ func main() {
 	Store(mask.As16(), ReturnIndex(0))
 	RET()
 
-	TEXT("MatchCRTLhash", NOSPLIT, "func(ctrl *[16]int8, hash int64) int32")
+	TEXT("MatchCRTLhash", NOSPLIT, "func(ctrl *[16]int8, hash uint64) uint64")
 	Doc("MatchCRTLhash performs a 16-way probe of the 8 bit value in |hash| to every byte of |ctrl| using SSE2/SSE3 instructions",
 		"nb: |ctrl| must be an aligned pointer")
 	m = Mem{Base: Load(Param("ctrl"), GP64())}
@@ -58,10 +58,10 @@ func main() {
 	PCMPEQB(x2, x0)
 	PMOVMSKB(x0, mask)
 
-	Store(mask.As32(), ReturnIndex(0))
+	Store(mask.As64(), ReturnIndex(0))
 	RET()
 
-	TEXT("MatchCRTLempty", NOSPLIT, "func(ctrl *[16]int8) int32")
+	TEXT("MatchCRTLempty", NOSPLIT, "func(ctrl *[16]int8) uint64")
 	Doc("MatchCRTLempty performs a 16-way probe of the 8 bit value for 'empty' (0b1000_0000) to every byte of |ctrl| using SSE2/SSE3 instructions",
 		"nb: |ctrl| must be an aligned pointer")
 	m = Mem{Base: Load(Param("ctrl"), GP64())}
@@ -78,10 +78,10 @@ func main() {
 	PCMPEQB(x2, x0)
 	PMOVMSKB(x0, mask)
 
-	Store(mask.As32(), ReturnIndex(0))
+	Store(mask.As64(), ReturnIndex(0))
 	RET()
 
-	TEXT("MatchCRTLdeleted", NOSPLIT, "func(ctrl *[16]int8) int32")
+	TEXT("MatchCRTLdeleted", NOSPLIT, "func(ctrl *[16]int8) uint64")
 	Doc("MatchCRTLdeleted performs a 16-way probe of the 8 bit value for 'deleted' (0b1111_1110) to every byte of |ctrl| using SSE2/SSE3 instructions",
 		"nb: |ctrl| must be an aligned pointer")
 	m = Mem{Base: Load(Param("ctrl"), GP64())}
@@ -98,7 +98,7 @@ func main() {
 	PCMPEQB(x2, x0)
 	PMOVMSKB(x0, mask)
 
-	Store(mask.As32(), ReturnIndex(0))
+	Store(mask.As64(), ReturnIndex(0))
 	RET()
 
 	Generate()

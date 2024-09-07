@@ -55,11 +55,9 @@ func Algorithm1(resultSet *Set[uint32], resultMap testMapType, searchElements []
 func Algorithm2(resultSet *Set[uint32], resultMap testMapType, searchElements []uint32) {
 	x := uint64(0)
 	for _, e := range searchElements {
-		if resultSet.Contains2(e) {
-			_, b := resultMap[e]
-			if b {
-				x += uint64(e)
-			}
+		_, b := resultMap[e]
+		if b {
+			x += uint64(e)
 		}
 	}
 	resultSet.Clear()

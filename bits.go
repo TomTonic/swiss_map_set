@@ -29,52 +29,28 @@ const (
 	hiBits uint64 = 0x8080808080808080
 )
 
-type bitset uint64
+// type bitset uint64
+type ctrlblk = [groupSize]int8
 
-func metaMatchH2(m *metadata, h h2) bitset {
+func ctlrMatchH2(m *ctrlblk, h uint64) uint64 {
 	// https://graphics.stanford.edu/~seander/bithacks.html##ValueInWord
-	return hasZeroByte(castUint64(m) ^ (loBits * uint64(h)))
+	return hasZeroByte(castUint64(m) ^ (loBits * h))
 }
 
-func metaMatchEmpty(m *metadata) bitset {
+func ctlrMatchEmpty(m *ctrlblk) uint64 {
 	return hasZeroByte(castUint64(m) ^ hiBits)
 }
 
-func nextMatch(b *bitset) uint32 {
-	s := uint32(bits.TrailingZeros64(uint64(*b)))
+func nextMatch(b *uint64) int {
+	s := bits.TrailingZeros64(*b)
 	*b &= ^(1 << s) // clear bit |s|
 	return s >> 3   // div by 8
 }
 
-func hasZeroByte(x uint64) bitset {
-	return bitset(((x - loBits) & ^(x)) & hiBits)
-}
-
-func castUint64(m *metadata) uint64 {
-	return *(*uint64)((unsafe.Pointer)(m))
-}
-
-// ---
-
-func metaMatchH2_64(m *[groupSize]int8, h uint64) uint64 {
-	// https://graphics.stanford.edu/~seander/bithacks.html##ValueInWord
-	return hasZeroByte_64(myCastUint64(m) ^ (loBits * uint64(h)))
-}
-
-func metaMatchEmpty_64(m *[groupSize]int8) uint64 {
-	return hasZeroByte_64(myCastUint64(m) ^ hiBits)
-}
-
-func nextMatch_64(b *uint64) uint64 {
-	s := uint64(bits.TrailingZeros64(*b))
-	*b &= ^(1 << s) // clear bit |s|
-	return s >> 3   // div by 8
-}
-
-func hasZeroByte_64(x uint64) uint64 {
+func hasZeroByte(x uint64) uint64 {
 	return ((x - loBits) & ^(x)) & hiBits
 }
 
-func myCastUint64(m *[groupSize]int8) uint64 {
+func castUint64(m *ctrlblk) uint64 {
 	return *(*uint64)((unsafe.Pointer)(m))
 }
