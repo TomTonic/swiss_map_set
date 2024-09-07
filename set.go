@@ -173,58 +173,6 @@ func (set *Set[K]) Add(element K) {
 	}
 }
 
-// Add attempts to insert |key| and |value|
-func (set *Set[K]) Add2(element K) {
-	if set.resident >= set.elementLimit {
-		set.rehash(set.nextSize())
-	}
-	hash := set.hashFunction.Hash(element)
-	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := hash & 0x0000_0000_0000_007f
-	grpIdx := H1 % uint64(len(set.group))
-	for {
-		ctrl := &(set.group[grpIdx].ctrl)
-		slot := &(set.group[grpIdx].slot)
-
-		matches := metaMatchH2_64(ctrl, H2)
-
-		var bitmask uint64 = 1
-		// look for matches
-		for i := 0; i < groupSize; i++ {
-			if (matches & bitmask) != 0 {
-				if element == slot[i] {
-					// found - already in, just return
-					return
-				}
-			}
-			bitmask <<= 1
-		}
-
-		// |key| is not in group |g|,
-		// stop probing if we see an empty slot
-		matches = metaMatchEmpty_64(ctrl)
-
-		if matches != 0 {
-			// empty spot -> element can't be in Set (see Contains) -> insert
-			var bitmask uint64 = 1
-			// find first match
-			for i := 0; i < groupSize; i++ {
-				if (matches & bitmask) != 0 {
-					ctrl[i] = int8(H2)
-					slot[i] = element
-					set.resident++
-					return
-				}
-				bitmask <<= 1
-			}
-		}
-		grpIdx += 1 // carousel through all groups
-		if grpIdx >= uint64(len(set.group)) {
-			grpIdx = 0
-		}
-	}
-}
-
 // Remove attempts to remove |element|, returns true if the |element| was in the |Set|
 func (set *Set[K]) Remove(element K) bool {
 	hash := set.hashFunction.Hash(element)
@@ -381,13 +329,45 @@ func (set *Set[K]) rehash(n uint32) {
 			group.ctrl[j] = kEmpty
 		}
 	}
+	grpCnt := uint64(len(set.group))
 	for _, old_grp := range old_groups {
 		for s := range groupSize {
 			c := old_grp.ctrl[s]
 			if c == kEmpty || c == kDeleted {
 				continue
 			}
-			set.Add(old_grp.slot[s])
+			// inlined and reduced Add instead of set.Add(old_grp.slot[s])
+
+			element := old_grp.slot[s]
+
+			hash := set.hashFunction.Hash(element)
+			H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
+			H2 := int64(hash & 0x0000_0000_0000_007f)
+			grpIdx := H1 % uint64(len(set.group))
+			stillSearchingSpace := true
+			for stillSearchingSpace {
+				ctrl := &(set.group[grpIdx].ctrl)
+				slot := &(set.group[grpIdx].slot)
+
+				// optimization: we know it cannot exist in the set already so skip
+				// searching for the hashcode and start searching for an empty slot
+				// immediately
+				matches := ctlrMatchEmpty(ctrl)
+
+				if matches != 0 {
+					// empty spot -> element can't be in Set (see Contains) -> insert
+					s := nextMatch_32(&matches)
+					ctrl[s] = int8(H2)
+					slot[s] = element
+					set.resident++
+					stillSearchingSpace = false
+
+				}
+				grpIdx += 1 // carousel through all groups
+				if grpIdx >= grpCnt {
+					grpIdx = 0
+				}
+			}
 		}
 	}
 }

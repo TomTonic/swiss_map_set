@@ -80,10 +80,10 @@ func benchmarkRuntimeSet[K comparable](b *testing.B, keys []K) {
 	mod := n - 1 // power of 2 fast modulus
 	require.Equal(b, 1, bits.OnesCount32(n))
 	m := make(map[K]K, n)
+	b.ResetTimer()
 	for _, k := range keys {
 		m[k] = k
 	}
-	b.ResetTimer()
 	var ok bool
 	for i := 0; i < b.N; i++ {
 		_, ok = m[keys[uint32(i)&mod]]
@@ -101,10 +101,10 @@ func benchmarkSwissSet[K comparable](b *testing.B, keys []K) {
 	mod := n - 1 // power of 2 fast modulus
 	require.Equal(b, 1, bits.OnesCount32(n))
 	m := NewSet[K](n)
+	b.ResetTimer()
 	for _, k := range keys {
 		m.Add(k)
 	}
-	b.ResetTimer()
 	var ok bool
 	for i := 0; i < b.N; i++ {
 		ok = m.Contains(keys[uint32(i)&mod])
