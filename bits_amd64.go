@@ -63,3 +63,21 @@ func nextMatch_64(b *uint64) (s uint64) {
 	*b &= ^(1 << s) // clear bit |s|
 	return
 }
+
+// ---
+
+func ctlrMatchH2(m *[16]int8, h int64) int32 {
+	b := simd.MatchCRTLhash(m, h)
+	return b
+}
+
+func ctlrMatchEmpty(m *[16]int8) int32 {
+	b := simd.MatchCRTLempty(m)
+	return b
+}
+
+func nextMatch_32(b *int32) (s int) {
+	s = bits.TrailingZeros16(uint16(*b))
+	*b &= ^(1 << s) // clear bit |s|
+	return
+}

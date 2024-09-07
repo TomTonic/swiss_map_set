@@ -68,26 +68,22 @@ func NewSet[K comparable](sz uint32) (s *Set[K]) {
 func (set *Set[K]) Contains(element K) bool {
 	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := hash & 0x0000_0000_0000_007f
+	H2 := int64(hash & 0x0000_0000_0000_007f)
 	grpIdx := H1 % uint64(len(set.group))
 	grpCnt := uint64(len(set.group))
 	for {
 		ctrl := &(set.group[grpIdx].ctrl)
 		slot := &(set.group[grpIdx].slot)
-		matches := metaMatchH2_64(ctrl, H2)
-		var bitmask uint64 = 1
-		// look for matches
-		for i := 0; i < groupSize; i++ {
-			if (matches & bitmask) != 0 {
-				if element == slot[i] {
-					return true
-				}
+		matches := ctlrMatchH2(ctrl, H2)
+		for matches != 0 {
+			s := nextMatch_32(&matches)
+			if element == slot[s] {
+				return true
 			}
-			bitmask <<= 1
 		}
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = metaMatchEmpty_64(ctrl)
+		matches = ctlrMatchEmpty(ctrl)
 		if matches != 0 {
 			// there is an empty slot - the element, if it had been added, hat either
 			// been found until now or it had been added in the next empty spot -
@@ -105,24 +101,22 @@ func (set *Set[K]) Contains(element K) bool {
 func (set *Set[K]) Contains2(element K) bool {
 	hash := set.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := uint32(hash & 0x0000_0000_0000_007f)
+	H2 := hash & 0x0000_0000_0000_007f
 	grpIdx := H1 % uint64(len(set.group))
 	grpCnt := uint64(len(set.group))
 	for {
 		ctrl := &(set.group[grpIdx].ctrl)
 		slot := &(set.group[grpIdx].slot)
-		for i := 0; i < groupSize; i++ {
-			ctrlByte := uint32(ctrl[i])
-			if ctrlByte == H2 {
-				if element == slot[i] {
-					return true
-				}
+		matches := metaMatchH2_64(ctrl, H2)
+		for matches != 0 {
+			s := nextMatch_64(&matches)
+			if element == slot[s] {
+				return true
 			}
 		}
-
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches := metaMatchEmpty_64(ctrl)
+		matches = metaMatchEmpty_64(ctrl)
 		if matches != 0 {
 			// there is an empty slot - the element, if it had been added, hat either
 			// been found until now or it had been added in the next empty spot -
@@ -132,37 +126,6 @@ func (set *Set[K]) Contains2(element K) bool {
 		grpIdx += 1 // carousel through all groups
 		if grpIdx >= grpCnt {
 			grpIdx = 0
-		}
-	}
-}
-
-// Has returns true if |key| is present in |set|.
-func (set *Set[K]) Has(key K) (ok bool) {
-	hash := set.hashFunction.Hash(key)
-	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := hash & 0x0000_0000_0000_007f
-	group := H1 % uint64(len(set.group))
-	for { // inlined find loop
-		ctrl := &(set.group[group].ctrl)
-		slot := &(set.group[group].slot)
-		matches := metaMatchH2_64(ctrl, H2)
-		for matches != 0 {
-			s := nextMatch_64(&matches)
-			if key == slot[s] {
-				ok = true
-				return
-			}
-		}
-		// |key| is not in group |g|,
-		// stop probing if we see an empty slot
-		matches = metaMatchEmpty_64(ctrl)
-		if matches != 0 {
-			ok = false
-			return
-		}
-		group += 1 // linear probing
-		if group >= uint64(len(set.group)) {
-			group = 0
 		}
 	}
 }

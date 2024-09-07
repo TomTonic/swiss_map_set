@@ -38,22 +38,13 @@ func prepareDataUint32(initialSetSize, finalSetSize, searchListSize int, minimal
 func Algorithm1(resultSet *Set[uint32], searchElements []uint32) {
 	x := uint64(0)
 	for _, e := range searchElements {
-		if resultSet.Has(e) {
-			x += uint64(e)
-		}
-	}
-}
-
-func Algorithm2(resultSet *Set[uint32], searchElements []uint32) {
-	x := uint64(0)
-	for _, e := range searchElements {
 		if resultSet.Contains(e) {
 			x += uint64(e)
 		}
 	}
 }
 
-func Algorithm3(resultSet *Set[uint32], searchElements []uint32) {
+func Algorithm2(resultSet *Set[uint32], searchElements []uint32) {
 	x := uint64(0)
 	for _, e := range searchElements {
 		if resultSet.Contains2(e) {
@@ -73,13 +64,6 @@ func BenchmarkAlgorithm2(b *testing.B) {
 	resultSet, searchElements := prepareDataUint32(10, 5000, 50000, 0.99)
 	for i := 0; i < b.N; i++ {
 		Algorithm2(resultSet, searchElements)
-	}
-}
-
-func BenchmarkAlgorithm3(b *testing.B) {
-	resultSet, searchElements := prepareDataUint32(10, 5000, 50000, 0.99)
-	for i := 0; i < b.N; i++ {
-		Algorithm3(resultSet, searchElements)
 	}
 }
 

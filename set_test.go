@@ -29,7 +29,7 @@ func TestSwissSet(t *testing.T) {
 		testSwissSet(t, genStringData(16, 0))
 	})
 	t.Run("strings=100", func(t *testing.T) {
-		testSwissSet(t, genStringData(16, 100))
+		testSwissSet(t, genStringData(16, 101))
 	})
 	t.Run("strings=1000", func(t *testing.T) {
 		testSwissSet(t, genStringData(16, 1000))
