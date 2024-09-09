@@ -15,6 +15,9 @@ go test -benchmem -benchtime=8s -timeout 115m -run="^$" -bench "^(BenchmarkSet3F
 ```
 
 Please note the logarithmic scales for most axes.
-![Speed comparison between Set3 and built-in `map[type]struct{}`](https://github.com/user-attachments/assets/ea809575-a8b3-449a-ae35-b6aa0081487e)
+
+### Inserting Nodes in an Empty Set
+
+![Speed comparison between Set3 and built-in `map[type]struct{}`](https://github.com/user-attachments/assets/46e9c4d1-45b7-4487-b2d3-a220150c5cdc)
 ![Memory comparison between Set3 and built-in `map[type]struct{}`](https://github.com/user-attachments/assets/8471cbaa-18b6-4197-8687-c03cb03ac6a9)
 ![Memory allocations comparison between Set3 and built-in `map[type]struct{}`](https://github.com/user-attachments/assets/34af5032-a34e-4385-b7e5-3690262ef427)
