@@ -89,7 +89,7 @@ var config = []struct {
 func BenchmarkSet1Fill(b *testing.B) {
 	for _, cfg := range config {
 		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		b.Run(fmt.Sprintf("inintialSetSize_%d_finalSetSize_%d_searchListSize_%d_minimalHitRatio_%f", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				resultSet := NewSet[uint32](uint32(cfg.inintialSetSize))
 				for j := 0; j < len(setValues); j++ {
@@ -103,7 +103,7 @@ func BenchmarkSet1Fill(b *testing.B) {
 func BenchmarkSet2Fill(b *testing.B) {
 	for _, cfg := range config {
 		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		b.Run(fmt.Sprintf("inintialSetSize_%d_finalSetSize_%d_searchListSize_%d_minimalHitRatio_%f", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				resultSet := NewSet2[uint32](uint32(cfg.inintialSetSize))
 				for j := 0; j < len(setValues); j++ {
@@ -117,7 +117,7 @@ func BenchmarkSet2Fill(b *testing.B) {
 func BenchmarkSet3Fill(b *testing.B) {
 	for _, cfg := range config {
 		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		b.Run(fmt.Sprintf("inintialSetSize_%d_finalSetSize_%d_searchListSize_%d_minimalHitRatio_%f", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				resultSet := NewSet3[uint32](uint32(cfg.inintialSetSize))
 				for j := 0; j < len(setValues); j++ {
@@ -131,7 +131,7 @@ func BenchmarkSet3Fill(b *testing.B) {
 func BenchmarkNativeMapFill(b *testing.B) {
 	for _, cfg := range config {
 		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		b.Run(fmt.Sprintf("inintialSetSize_%d_finalSetSize_%d_searchListSize_%d_minimalHitRatio_%f", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				resultSet := make(testMapType, 10)
 				for j := 0; j < len(setValues); j++ {
@@ -150,7 +150,7 @@ func BenchmarkSet1Find(b *testing.B) {
 			resultSet.Add(setValues[j])
 		}
 		var x uint64
-		b.Run(fmt.Sprintf("inintialSetSize_%d_finalSetSize_%d_searchListSize_%d_minimalHitRatio_%f", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				x = 0
 				for _, e := range searchElements {
@@ -160,7 +160,7 @@ func BenchmarkSet1Find(b *testing.B) {
 				}
 			}
 		})
-		println(x)
+		//println(x)
 	}
 }
 
@@ -172,7 +172,7 @@ func BenchmarkSet2Find(b *testing.B) {
 			resultSet.Add(setValues[j])
 		}
 		var x uint64
-		b.Run(fmt.Sprintf("inintialSetSize_%d_finalSetSize_%d_searchListSize_%d_minimalHitRatio_%f", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				x = 0
 				for _, e := range searchElements {
@@ -182,7 +182,7 @@ func BenchmarkSet2Find(b *testing.B) {
 				}
 			}
 		})
-		println(x)
+		//println(x)
 	}
 }
 
@@ -194,7 +194,7 @@ func BenchmarkSet3Find(b *testing.B) {
 			resultSet.Add(setValues[j])
 		}
 		var x uint64
-		b.Run(fmt.Sprintf("inintialSetSize_%d_finalSetSize_%d_searchListSize_%d_minimalHitRatio_%f", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				x = 0
 				for _, e := range searchElements {
@@ -204,7 +204,7 @@ func BenchmarkSet3Find(b *testing.B) {
 				}
 			}
 		})
-		println(x)
+		//println(x)
 	}
 }
 
@@ -217,7 +217,7 @@ func BenchmarkNativeMapFind(b *testing.B) {
 			resultSet[setValues[j]] = struct{}{}
 		}
 		var x uint64
-		b.Run(fmt.Sprintf("inintialSetSize(%d);finalSetSize(%d);searchListSize(%d);minimalHitRatio(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				x = 0
 				for _, e := range searchElements {
@@ -228,7 +228,7 @@ func BenchmarkNativeMapFind(b *testing.B) {
 				}
 			}
 		})
-		println(x)
+		//println(x)
 	}
 }
 

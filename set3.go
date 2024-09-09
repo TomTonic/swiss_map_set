@@ -17,7 +17,6 @@ package swiss
 import (
 	"math/bits"
 	"math/rand/v2"
-	"unsafe"
 
 	"github.com/dolthub/maphash"
 )
@@ -28,18 +27,24 @@ const (
 
 	set3loBits uint64 = 0x0101010101010101
 	set3hiBits uint64 = 0x8080808080808080
+
+	set3AllEmpty   uint64 = 0x8080808080808080
+	set3AllDeleted uint64 = 0xFEFEFEFEFEFEFEFE
+	set3Empty      uint64 = 0b0000_1000_0000
+	set3Deleted    uint64 = 0b0000_1111_1110
+	set3Sentinel   uint64 = 0b0000_1111_1111
 )
 
 // type bitset uint64
 type set3ctrlblk = [set3groupSize]int8
 
-func set3ctlrMatchH2(m *set3ctrlblk, h uint64) uint64 {
+func set3ctlrMatchH2(m uint64, h uint64) uint64 {
 	// https://graphics.stanford.edu/~seander/bithacks.html##ValueInWord
-	return set3hasZeroByte(set3castUint64(m) ^ (set3loBits * h))
+	return set3hasZeroByte(m ^ (set3loBits * h))
 }
 
-func set3ctlrMatchEmpty(m *set3ctrlblk) uint64 {
-	return set3hasZeroByte(set3castUint64(m) ^ set3hiBits)
+func set3ctlrMatchEmpty(m uint64) uint64 {
+	return set3hasZeroByte(m ^ set3hiBits)
 }
 
 func set3nextMatch(b *uint64) int {
@@ -52,12 +57,8 @@ func set3hasZeroByte(x uint64) uint64 {
 	return ((x - set3loBits) & ^(x)) & set3hiBits
 }
 
-func set3castUint64(m *set3ctrlblk) uint64 {
-	return *(*uint64)((unsafe.Pointer)(m))
-}
-
 type set3Group[K comparable] struct {
-	ctrl [set3groupSize]int8
+	ctrl uint64
 	slot [set3groupSize]K
 }
 
@@ -83,10 +84,7 @@ func NewSet3[K comparable](sz uint32) (s *Set3[K]) {
 		group:        make([]set3Group[K], reqNrOfGroups),
 	}
 	for i := range len(s.group) {
-		g := &s.group[i]
-		for j := range set3groupSize {
-			g.ctrl[j] = kEmpty
-		}
+		s.group[i].ctrl = set3AllEmpty
 	}
 	return
 }
@@ -100,7 +98,7 @@ func (Set3 *Set3[K]) Contains(element K) bool {
 	grpIdx := H1 % grpCnt
 	for {
 		group := &Set3.group[grpIdx]
-		ctrl := &(group.ctrl)
+		ctrl := group.ctrl
 		slot := &(group.slot)
 		matches := set3ctlrMatchH2(ctrl, H2)
 		//matches := simd.MatchCRTLhash(ctrl, H2)
@@ -135,11 +133,12 @@ func (Set3 *Set3[K]) Add(element K) {
 	hash := Set3.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpIdx := H1 % uint64(len(Set3.group))
 	grpCnt := uint64(len(Set3.group))
+	grpIdx := H1 % grpCnt
 	for {
-		ctrl := &(Set3.group[grpIdx].ctrl)
-		slot := &(Set3.group[grpIdx].slot)
+		group := &Set3.group[grpIdx]
+		ctrl := group.ctrl
+		slot := &(group.slot)
 
 		matches := set3ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
@@ -157,7 +156,7 @@ func (Set3 *Set3[K]) Add(element K) {
 		if matches != 0 {
 			// empty spot -> element can't be in Set3 (see Contains) -> insert
 			s := set3nextMatch(&matches)
-			ctrl[s] = int8(H2)
+			group.ctrl = setCTRLat(ctrl, H2, s)
 			slot[s] = element
 			Set3.resident++
 			return
@@ -170,16 +169,32 @@ func (Set3 *Set3[K]) Add(element K) {
 	}
 }
 
+func setCTRLat(ctrl, val uint64, pos int) uint64 {
+	shift := pos << 3                // *8
+	ctrl &= ^(uint64(0xFF) << shift) // clear byte
+	ctrl |= val << shift             // set byte to given value
+	return ctrl
+}
+
+func elementAt(ctrl uint64, pos int) bool {
+	shift := pos << 3               // *8
+	ctrl &= (uint64(0x80) << shift) // clear all other bits
+	// if a bit is set, the according byte represented either set3Empty or set3Deleted
+	// -> if ctlr is 0 now, the according position stores a value
+	return ctrl == 0
+}
+
 // Remove attempts to remove |element|, returns true if the |element| was in the |Set3|
 func (Set3 *Set3[K]) Remove(element K) bool {
 	hash := Set3.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpIdx := H1 % uint64(len(Set3.group))
 	grpCnt := uint64(len(Set3.group))
+	grpIdx := H1 % grpCnt
 	for {
-		ctrl := &(Set3.group[grpIdx].ctrl)
-		slot := &(Set3.group[grpIdx].slot)
+		group := &Set3.group[grpIdx]
+		ctrl := group.ctrl
+		slot := &(group.slot)
 		matches := set3ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
 			s := set3nextMatch(&matches)
@@ -193,10 +208,10 @@ func (Set3 *Set3[K]) Remove(element K) bool {
 				// slot, and therefore reclaiming slot |s| will not
 				// cause premature termination of probes into |g|.
 				if set3ctlrMatchEmpty(ctrl) != 0 {
-					ctrl[s] = kEmpty
+					group.ctrl = setCTRLat(ctrl, set3Empty, s)
 					Set3.resident--
 				} else {
-					ctrl[s] = kDeleted
+					group.ctrl = setCTRLat(ctrl, set3Deleted, s)
 					Set3.dead++
 				}
 				var k K
@@ -231,15 +246,15 @@ func (Set3 *Set3[K]) Iter(callBack func(element K) (stop bool)) {
 	// pick a random starting group
 	grpIdx := rand.Uint32N(uint32(len(data)))
 	for n := 0; n < len(data); n++ {
-		ctrl := &(data[grpIdx].ctrl)
-		slot := &(data[grpIdx].slot)
-		for i, ctrlByte := range ctrl {
-			if ctrlByte == kEmpty || ctrlByte == kDeleted {
-				continue
-			}
-			k := slot[i]
-			if stop := callBack(k); stop {
-				return
+		group := &data[grpIdx]
+		ctrl := group.ctrl
+		slot := &(group.slot)
+		for i := range set3groupSize {
+			if elementAt(ctrl, i) {
+				k := slot[i]
+				if stop := callBack(k); stop {
+					return
+				}
 			}
 		}
 		grpIdx++
@@ -254,8 +269,8 @@ func (Set3 *Set3[K]) Clear() {
 	var k K
 	for grpidx := range len(Set3.group) {
 		d := &(Set3.group[grpidx])
+		d.ctrl = set3AllEmpty
 		for j := range set3groupSize {
-			d.ctrl[j] = kEmpty
 			d.slot[j] = k
 		}
 	}
@@ -282,8 +297,9 @@ func (Set3 *Set3[K]) find(key K) (g uint64, s int, ok bool) {
 	H2 := hash & 0x0000_0000_0000_007f
 	g = H1 % uint64(len(Set3.group))
 	for {
-		ctrl := &Set3.group[g].ctrl
-		slot := &Set3.group[g].slot
+		group := &Set3.group[g]
+		ctrl := group.ctrl
+		slot := &(group.slot)
 		matches := set3ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
 			s = set3nextMatch(&matches)
@@ -321,48 +337,45 @@ func (Set3 *Set3[K]) rehash(n uint32) {
 	Set3.resident, Set3.dead = 0, 0
 	Set3.group = make([]set3Group[K], n)
 	for i := range len(Set3.group) {
-		group := &Set3.group[i]
-		for j := range set3groupSize {
-			group.ctrl[j] = kEmpty
-		}
+		Set3.group[i].ctrl = set3AllEmpty
 	}
 	grpCnt := uint64(len(Set3.group))
 	for _, old_grp := range old_groups {
-		for s := range set3groupSize {
-			c := old_grp.ctrl[s]
-			if c == kEmpty || c == kDeleted {
-				continue
-			}
-			// inlined and reduced Add instead of Set3.Add(old_grp.slot[s])
+		if old_grp.ctrl&set3hiBits != set3hiBits { // not all empty or deleted
+			for s := range set3groupSize {
+				if elementAt(old_grp.ctrl, s) {
+					// inlined and reduced Add instead of Set3.Add(old_grp.slot[s])
+					element := old_grp.slot[s]
 
-			element := old_grp.slot[s]
+					hash := Set3.hashFunction.Hash(element)
+					H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
+					H2 := (hash & 0x0000_0000_0000_007f)
+					grpIdx := H1 % uint64(len(Set3.group))
+					stillSearchingSpace := true
+					for stillSearchingSpace {
+						group := &Set3.group[grpIdx]
+						ctrl := group.ctrl
+						slot := &(group.slot)
 
-			hash := Set3.hashFunction.Hash(element)
-			H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-			H2 := int64(hash & 0x0000_0000_0000_007f)
-			grpIdx := H1 % uint64(len(Set3.group))
-			stillSearchingSpace := true
-			for stillSearchingSpace {
-				ctrl := &(Set3.group[grpIdx].ctrl)
-				slot := &(Set3.group[grpIdx].slot)
+						// optimization: we know it cannot exist in the Set3 already so skip
+						// searching for the hashcode and start searching for an empty slot
+						// immediately
+						matches := set3ctlrMatchEmpty(ctrl)
 
-				// optimization: we know it cannot exist in the Set3 already so skip
-				// searching for the hashcode and start searching for an empty slot
-				// immediately
-				matches := set3ctlrMatchEmpty(ctrl)
+						if matches != 0 {
+							// empty spot -> element can't be in Set3 (see Contains) -> insert
+							s := set3nextMatch(&matches)
+							group.ctrl = setCTRLat(ctrl, H2, s)
+							slot[s] = element
+							Set3.resident++
+							stillSearchingSpace = false
 
-				if matches != 0 {
-					// empty spot -> element can't be in Set3 (see Contains) -> insert
-					s := set3nextMatch(&matches)
-					ctrl[s] = int8(H2)
-					slot[s] = element
-					Set3.resident++
-					stillSearchingSpace = false
-
-				}
-				grpIdx += 1 // carousel through all groups
-				if grpIdx >= grpCnt {
-					grpIdx = 0
+						}
+						grpIdx += 1 // carousel through all groups
+						if grpIdx >= grpCnt {
+							grpIdx = 0
+						}
+					}
 				}
 			}
 		}
