@@ -18,6 +18,14 @@ Please note the logarithmic scales for most axes.
 
 ### Inserting Nodes in an Empty Set
 
+Total time/additional memory/memory allocations for inserting different numbers of elements into empty sets with an initial capacity of 10 elements.
+
 ![Speed comparison between Set3 and built-in `map[type]struct{}`](https://github.com/user-attachments/assets/46e9c4d1-45b7-4487-b2d3-a220150c5cdc)
 ![Memory comparison between Set3 and built-in `map[type]struct{}`](https://github.com/user-attachments/assets/8471cbaa-18b6-4197-8687-c03cb03ac6a9)
 ![Memory allocations comparison between Set3 and built-in `map[type]struct{}`](https://github.com/user-attachments/assets/34af5032-a34e-4385-b7e5-3690262ef427)
+
+### Searching Nodes in a Populated Set
+
+Total time for searching 5000 elements in sets of different sizes, 30% hit ratio.
+
+![perf_searching](https://github.com/user-attachments/assets/00d3f105-bfe9-4fea-baaf-ff6ff4f05bbd)
