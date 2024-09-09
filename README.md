@@ -33,4 +33,5 @@ Total time for searching 5000 elements in sets of different sizes, 30% hit ratio
 #### TODO
 
 ![Screenshot 2024-09-09 202238](https://github.com/user-attachments/assets/23f298a1-0b3e-4e17-b5fb-8d058043a834)
+![Screenshot 2024-09-09 204215](https://github.com/user-attachments/assets/be1aa622-8084-463b-9605-5fb0a97b8f58)
 Peak at ((2^n)-1)*7?
