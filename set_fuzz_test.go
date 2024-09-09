@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package swiss
+package Set3
 
 import (
 	"testing"
@@ -45,7 +45,7 @@ func fuzzTestStringSet(t *testing.T, keySz, init, count uint32) {
 	if count > limit || init > limit {
 		t.Skip()
 	}
-	m := NewSet[string](init)
+	m := NewSet3[string](init)
 	if count == 0 {
 		return
 	}
@@ -91,7 +91,7 @@ type hasher struct {
 	seed uintptr
 }
 
-func setConstSeedSet[K comparable](set *Set[K], seed uintptr) {
+func setConstSeedSet[K comparable](set *Set3[K], seed uintptr) {
 	h := (*hasher)((unsafe.Pointer)(&set.hashFunction))
 	h.seed = seed
 }

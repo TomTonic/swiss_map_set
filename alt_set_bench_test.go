@@ -1,4 +1,4 @@
-package swiss
+package Set3
 
 import (
 	"fmt"
@@ -10,37 +10,6 @@ import (
 
 type testMapType map[uint32]struct{}
 
-/*
-	func prepareDataUint32(initialSetSize, finalSetSize, searchListSize int, minimalHitRatio float32) (resultSet *Set[uint32], resultMap testMapType, searchElements []uint32) {
-		resultSet = NewSet[uint32](uint32(initialSetSize))
-		resultMap = make(testMapType, initialSetSize)
-		for n := 0; n < finalSetSize; n++ {
-			element := rand.Uint32()
-			resultSet.Add(element)
-			resultMap[element] = 1
-		}
-		nrOfElemToCopy := int(minimalHitRatio * float32(searchListSize))
-		tempList := make([]uint32, 0, searchListSize)
-		countCopied := 0
-		for countCopied < nrOfElemToCopy {
-			resultSet.Iter(func(e uint32) (stop bool) {
-				tempList = append(tempList, e)
-				countCopied++
-				return countCopied >= nrOfElemToCopy
-			})
-		}
-		for n := countCopied; n < searchListSize; n++ {
-			element := rand.Uint32()
-			tempList = append(tempList, element)
-		}
-		perm := rand.Perm(searchListSize)
-		searchElements = make([]uint32, searchListSize)
-		for i, idx := range perm {
-			searchElements[i] = tempList[idx]
-		}
-		return
-	}
-*/
 func prepareDataUint32(setSize, searchListSize int, minimalHitRatio float32, seed int64) (setValues []uint32, searchElements []uint32) {
 	rng := rand.New(rand.NewSource(seed))
 	setValues = make([]uint32, setSize)
@@ -86,34 +55,6 @@ var config = []struct {
 	{inintialSetSize: 10, finalSetSize: 50, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
 }
 
-func BenchmarkSet1Fill(b *testing.B) {
-	for _, cfg := range config {
-		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				resultSet := NewSet[uint32](uint32(cfg.inintialSetSize))
-				for j := 0; j < len(setValues); j++ {
-					resultSet.Add(setValues[j])
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkSet2Fill(b *testing.B) {
-	for _, cfg := range config {
-		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				resultSet := NewSet2[uint32](uint32(cfg.inintialSetSize))
-				for j := 0; j < len(setValues); j++ {
-					resultSet.Add(setValues[j])
-				}
-			}
-		})
-	}
-}
-
 func BenchmarkSet3Fill(b *testing.B) {
 	for _, cfg := range config {
 		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
@@ -139,50 +80,6 @@ func BenchmarkNativeMapFill(b *testing.B) {
 				}
 			}
 		})
-	}
-}
-
-func BenchmarkSet1Find(b *testing.B) {
-	for _, cfg := range config {
-		setValues, searchElements := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		resultSet := NewSet[uint32](uint32(cfg.inintialSetSize))
-		for j := 0; j < len(setValues); j++ {
-			resultSet.Add(setValues[j])
-		}
-		var x uint64
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				x = 0
-				for _, e := range searchElements {
-					if resultSet.Contains(e) {
-						x += 1
-					}
-				}
-			}
-		})
-		//println(x)
-	}
-}
-
-func BenchmarkSet2Find(b *testing.B) {
-	for _, cfg := range config {
-		setValues, searchElements := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		resultSet := NewSet2[uint32](uint32(cfg.inintialSetSize))
-		for j := 0; j < len(setValues); j++ {
-			resultSet.Add(setValues[j])
-		}
-		var x uint64
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				x = 0
-				for _, e := range searchElements {
-					if resultSet.Contains(e) {
-						x += 1
-					}
-				}
-			}
-		})
-		//println(x)
 	}
 }
 

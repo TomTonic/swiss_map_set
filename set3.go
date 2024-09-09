@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package swiss
+package Set3
 
 import (
 	"math/bits"
@@ -25,6 +25,8 @@ const (
 	set3groupSize       = 8
 	set3maxAvgGroupLoad = 7
 
+	set3maxLoadFactor = float32(set3maxAvgGroupLoad) / float32(set3groupSize)
+
 	set3loBits uint64 = 0x0101010101010101
 	set3hiBits uint64 = 0x8080808080808080
 
@@ -34,9 +36,6 @@ const (
 	set3Deleted    uint64 = 0b0000_1111_1110
 	set3Sentinel   uint64 = 0b0000_1111_1111
 )
-
-// type bitset uint64
-type set3ctrlblk = [set3groupSize]int8
 
 func set3ctlrMatchH2(m uint64, h uint64) uint64 {
 	// https://graphics.stanford.edu/~seander/bithacks.html##ValueInWord
