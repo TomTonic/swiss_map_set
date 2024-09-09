@@ -131,7 +131,7 @@ func genUint32Data(count int) (keys []uint32) {
 }
 
 func testSetPut[K comparable](t *testing.T, keys []K) {
-	m := NewSet[K](uint32(len(keys)))
+	m := NewSet3[K](uint32(len(keys)))
 	assert.Equal(t, 0, m.Count())
 	for _, key := range keys {
 		m.Add(key)
@@ -150,7 +150,7 @@ func testSetPut[K comparable](t *testing.T, keys []K) {
 }
 
 func testSetHas[K comparable](t *testing.T, keys []K) {
-	m := NewSet[K](uint32(len(keys)))
+	m := NewSet3[K](uint32(len(keys)))
 	for _, key := range keys {
 		m.Add(key)
 	}
@@ -161,7 +161,7 @@ func testSetHas[K comparable](t *testing.T, keys []K) {
 }
 
 func testSetDelete[K comparable](t *testing.T, keys []K) {
-	m := NewSet[K](uint32(len(keys)))
+	m := NewSet3[K](uint32(len(keys)))
 	assert.Equal(t, 0, m.Count())
 	for _, key := range keys {
 		m.Add(key)
@@ -181,7 +181,7 @@ func testSetDelete[K comparable](t *testing.T, keys []K) {
 }
 
 func testSetClear[K comparable](t *testing.T, keys []K) {
-	m := NewSet[K](0)
+	m := NewSet3[K](0)
 	assert.Equal(t, 0, m.Count())
 	for _, key := range keys {
 		m.Add(key)
@@ -211,7 +211,7 @@ func testSetClear[K comparable](t *testing.T, keys []K) {
 }
 
 func testSetIter[K comparable](t *testing.T, keys []K) {
-	m := NewSet[K](uint32(len(keys)))
+	m := NewSet3[K](uint32(len(keys)))
 	for _, key := range keys {
 		m.Add(key)
 	}
@@ -249,7 +249,7 @@ func testSetIter[K comparable](t *testing.T, keys []K) {
 
 func testSetGrow[K comparable](t *testing.T, keys []K) {
 	n := uint32(len(keys))
-	m := NewSet[K](n / 10)
+	m := NewSet3[K](n / 10)
 	for _, key := range keys {
 		m.Add(key)
 	}
@@ -274,7 +274,7 @@ func testSwissSetCapacity[K comparable](t *testing.T, gen func(n int) []K) {
 		100 * maxAvgGroupLoad,
 	}
 	for _, c := range caps {
-		m := NewSet[K](c)
+		m := NewSet3[K](c)
 		assert.Equal(t, int(c), m.Capacity())
 		keys := gen(rand.Intn(int(c)))
 		for _, k := range keys {

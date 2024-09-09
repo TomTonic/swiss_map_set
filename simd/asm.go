@@ -71,7 +71,6 @@ func main() {
 	x0, x1, x2 = XMM(), XMM(), XMM()
 	MOVQ(U32(0b1000_0000), tmp64)
 	MOVQ(tmp64, x0)
-
 	PXOR(x1, x1)
 	PSHUFB(x1, x0)
 	MOVOU(m, x2)
@@ -91,7 +90,6 @@ func main() {
 	x0, x1, x2 = XMM(), XMM(), XMM()
 	MOVQ(U32(0b1111_1110), tmp64)
 	MOVQ(tmp64, x0)
-
 	PXOR(x1, x1)
 	PSHUFB(x1, x0)
 	MOVOU(m, x2)

@@ -15,75 +15,104 @@
 package swiss
 
 import (
+	"math/bits"
 	"math/rand/v2"
+	"unsafe"
 
 	"github.com/dolthub/maphash"
 )
 
 const (
-	maxLoadFactor = float32(maxAvgGroupLoad) / float32(groupSize)
+	set3groupSize       = 8
+	set3maxAvgGroupLoad = 7
+
+	set3loBits uint64 = 0x0101010101010101
+	set3hiBits uint64 = 0x8080808080808080
 )
 
-// Set is an open-addressing set
+// type bitset uint64
+type set3ctrlblk = [set3groupSize]int8
+
+func set3ctlrMatchH2(m *set3ctrlblk, h uint64) uint64 {
+	// https://graphics.stanford.edu/~seander/bithacks.html##ValueInWord
+	return set3hasZeroByte(set3castUint64(m) ^ (set3loBits * h))
+}
+
+func set3ctlrMatchEmpty(m *set3ctrlblk) uint64 {
+	return set3hasZeroByte(set3castUint64(m) ^ set3hiBits)
+}
+
+func set3nextMatch(b *uint64) int {
+	s := bits.TrailingZeros64(*b)
+	*b &= ^(1 << s) // clear bit |s|
+	return s >> 3   // div by 8
+}
+
+func set3hasZeroByte(x uint64) uint64 {
+	return ((x - set3loBits) & ^(x)) & set3hiBits
+}
+
+func set3castUint64(m *set3ctrlblk) uint64 {
+	return *(*uint64)((unsafe.Pointer)(m))
+}
+
+type set3Group[K comparable] struct {
+	ctrl [set3groupSize]int8
+	slot [set3groupSize]K
+}
+
+// Set3 is an open-addressing Set3
 // based on Abseil's flat_hash_map.
-type Set[K comparable] struct {
+type Set3[K comparable] struct {
 	hashFunction maphash.Hasher[K]
 	resident     uint32
 	dead         uint32
 	elementLimit uint32
-	group        []Group[K]
+	group        []set3Group[K]
 }
 
-type Group[K comparable] struct {
-	ctrl [groupSize]int8
-	slot [groupSize]K
-}
-
-const (
-	kEmpty    = -128 // 0b10000000
-	kDeleted  = -2   // 0b11111110
-	kSentinel = -1   // 0b11111111
-	// kFull= ... // 0b0hhhhhhh, h = bit from hash value
-)
-
-// NewSet constructs a Set.
-func NewSet[K comparable](sz uint32) (s *Set[K]) {
-	reqNrOfGroups := numGroups(sz)
-	s = &Set[K]{
+// NewSet3 constructs a Set3.
+func NewSet3[K comparable](sz uint32) (s *Set3[K]) {
+	reqNrOfGroups := (sz + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad
+	if reqNrOfGroups == 0 {
+		reqNrOfGroups = 1
+	}
+	s = &Set3[K]{
 		hashFunction: maphash.NewHasher[K](),
-		elementLimit: reqNrOfGroups * maxAvgGroupLoad,
-		group:        make([]Group[K], reqNrOfGroups),
+		elementLimit: reqNrOfGroups * set3maxAvgGroupLoad,
+		group:        make([]set3Group[K], reqNrOfGroups),
 	}
 	for i := range len(s.group) {
 		g := &s.group[i]
-		for j := range groupSize {
+		for j := range set3groupSize {
 			g.ctrl[j] = kEmpty
 		}
 	}
 	return
 }
 
-// Contains returns true if |element| is present in the |Set|.
-func (set *Set[K]) Contains(element K) bool {
-	hash := set.hashFunction.Hash(element)
+// Contains returns true if |element| is present in the |Set3|.
+func (Set3 *Set3[K]) Contains(element K) bool {
+	hash := Set3.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpIdx := H1 % uint64(len(set.group))
-	grpCnt := uint64(len(set.group))
+	grpCnt := uint64(len(Set3.group))
+	grpIdx := H1 % grpCnt
 	for {
-		ctrl := &(set.group[grpIdx].ctrl)
-		slot := &(set.group[grpIdx].slot)
-		matches := ctlrMatchH2(ctrl, H2)
+		group := &Set3.group[grpIdx]
+		ctrl := &(group.ctrl)
+		slot := &(group.slot)
+		matches := set3ctlrMatchH2(ctrl, H2)
 		//matches := simd.MatchCRTLhash(ctrl, H2)
 		for matches != 0 {
-			s := nextMatch(&matches)
+			s := set3nextMatch(&matches)
 			if element == slot[s] {
 				return true
 			}
 		}
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = ctlrMatchEmpty(ctrl)
+		matches = set3ctlrMatchEmpty(ctrl)
 		//matches = simd.MatchCRTLempty(ctrl)
 		if matches != 0 {
 			// there is an empty slot - the element, if it had been added, hat either
@@ -99,38 +128,38 @@ func (set *Set[K]) Contains(element K) bool {
 }
 
 // Add attempts to insert |key| and |value|
-func (set *Set[K]) Add(element K) {
-	if set.resident >= set.elementLimit {
-		set.rehash(set.nextSize())
+func (Set3 *Set3[K]) Add(element K) {
+	if Set3.resident >= Set3.elementLimit {
+		Set3.rehash(Set3.nextSize())
 	}
-	hash := set.hashFunction.Hash(element)
+	hash := Set3.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpIdx := H1 % uint64(len(set.group))
-	grpCnt := uint64(len(set.group))
+	grpIdx := H1 % uint64(len(Set3.group))
+	grpCnt := uint64(len(Set3.group))
 	for {
-		ctrl := &(set.group[grpIdx].ctrl)
-		slot := &(set.group[grpIdx].slot)
+		ctrl := &(Set3.group[grpIdx].ctrl)
+		slot := &(Set3.group[grpIdx].slot)
 
-		matches := ctlrMatchH2(ctrl, H2)
+		matches := set3ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
-			s := nextMatch(&matches)
+			s := set3nextMatch(&matches)
 			if element == slot[s] {
-				// found - already in Set, just return
+				// found - already in Set3, just return
 				return
 			}
 		}
 
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = ctlrMatchEmpty(ctrl)
+		matches = set3ctlrMatchEmpty(ctrl)
 
 		if matches != 0 {
-			// empty spot -> element can't be in Set (see Contains) -> insert
-			s := nextMatch(&matches)
+			// empty spot -> element can't be in Set3 (see Contains) -> insert
+			s := set3nextMatch(&matches)
 			ctrl[s] = int8(H2)
 			slot[s] = element
-			set.resident++
+			Set3.resident++
 			return
 
 		}
@@ -141,21 +170,21 @@ func (set *Set[K]) Add(element K) {
 	}
 }
 
-// Remove attempts to remove |element|, returns true if the |element| was in the |Set|
-func (set *Set[K]) Remove(element K) bool {
-	hash := set.hashFunction.Hash(element)
+// Remove attempts to remove |element|, returns true if the |element| was in the |Set3|
+func (Set3 *Set3[K]) Remove(element K) bool {
+	hash := Set3.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpIdx := H1 % uint64(len(set.group))
-	grpCnt := uint64(len(set.group))
+	grpIdx := H1 % uint64(len(Set3.group))
+	grpCnt := uint64(len(Set3.group))
 	for {
-		ctrl := &(set.group[grpIdx].ctrl)
-		slot := &(set.group[grpIdx].slot)
-		matches := ctlrMatchH2(ctrl, H2)
+		ctrl := &(Set3.group[grpIdx].ctrl)
+		slot := &(Set3.group[grpIdx].slot)
+		matches := set3ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
-			s := nextMatch(&matches)
+			s := set3nextMatch(&matches)
 			if element == slot[s] {
-				// found - already in Set, just return
+				// found - already in Set3, just return
 				// optimization: if |m.ctrl[g]| contains any empty
 				// metadata bytes, we can physically delete |element|
 				// rather than placing a tombstone.
@@ -163,12 +192,12 @@ func (set *Set[K]) Remove(element K) bool {
 				// would already be terminated by the existing empty
 				// slot, and therefore reclaiming slot |s| will not
 				// cause premature termination of probes into |g|.
-				if ctlrMatchEmpty(ctrl) != 0 {
+				if set3ctlrMatchEmpty(ctrl) != 0 {
 					ctrl[s] = kEmpty
-					set.resident--
+					Set3.resident--
 				} else {
 					ctrl[s] = kDeleted
-					set.dead++
+					Set3.dead++
 				}
 				var k K
 				slot[s] = k
@@ -178,7 +207,7 @@ func (set *Set[K]) Remove(element K) bool {
 
 		// |element| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = ctlrMatchEmpty(ctrl)
+		matches = set3ctlrMatchEmpty(ctrl)
 		if matches != 0 {
 			// |element| absent
 			return false
@@ -194,11 +223,11 @@ func (set *Set[K]) Remove(element K) bool {
 // It guarantees that any key in the Map will be visited only once, and
 // for un-mutated Maps, every key will be visited once. If the Map is
 // Mutated during iteration, mutations will be reflected on return from
-// Iter, but the set of keys visited by Iter is non-deterministic.
-func (set *Set[K]) Iter(callBack func(element K) (stop bool)) {
+// Iter, but the Set3 of keys visited by Iter is non-deterministic.
+func (Set3 *Set3[K]) Iter(callBack func(element K) (stop bool)) {
 	// take a consistent view of the table in case
 	// we rehash during iteration
-	data := set.group
+	data := Set3.group
 	// pick a random starting group
 	grpIdx := rand.Uint32N(uint32(len(data)))
 	for n := 0; n < len(data); n++ {
@@ -221,113 +250,113 @@ func (set *Set[K]) Iter(callBack func(element K) (stop bool)) {
 }
 
 // Clear removes all elements from the Map.
-func (set *Set[K]) Clear() {
+func (Set3 *Set3[K]) Clear() {
 	var k K
-	for grpidx := range len(set.group) {
-		d := &(set.group[grpidx])
-		for j := range groupSize {
+	for grpidx := range len(Set3.group) {
+		d := &(Set3.group[grpidx])
+		for j := range set3groupSize {
 			d.ctrl[j] = kEmpty
 			d.slot[j] = k
 		}
 	}
-	set.resident, set.dead = 0, 0
+	Set3.resident, Set3.dead = 0, 0
 }
 
 // Count returns the number of elements in the Map.
-func (set *Set[K]) Count() int {
-	return int(set.resident - set.dead)
+func (Set3 *Set3[K]) Count() int {
+	return int(Set3.resident - Set3.dead)
 }
 
 // Capacity returns the number of additional elements
 // the can be added to the Map before resizing.
-func (set *Set[K]) Capacity() int {
-	return int(set.elementLimit - set.resident)
+func (Set3 *Set3[K]) Capacity() int {
+	return int(Set3.elementLimit - Set3.resident)
 }
 
 // find returns the location of |key| if present, or its insertion location if absent.
 // for performance, find is manually inlined into public methods.
-func (set *Set[K]) find(key K) (g uint64, s int, ok bool) {
-	//g = probeStart2(hi, len(set.data))
-	hash := set.hashFunction.Hash(key)
+func (Set3 *Set3[K]) find(key K) (g uint64, s int, ok bool) {
+	//g = probeStart2(hi, len(Set3.data))
+	hash := Set3.hashFunction.Hash(key)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := hash & 0x0000_0000_0000_007f
-	g = H1 % uint64(len(set.group))
+	g = H1 % uint64(len(Set3.group))
 	for {
-		ctrl := &set.group[g].ctrl
-		slot := &set.group[g].slot
-		matches := ctlrMatchH2(ctrl, H2)
+		ctrl := &Set3.group[g].ctrl
+		slot := &Set3.group[g].slot
+		matches := set3ctlrMatchH2(ctrl, H2)
 		for matches != 0 {
-			s = nextMatch(&matches)
+			s = set3nextMatch(&matches)
 			if key == slot[s] {
 				return g, s, true
 			}
 		}
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = ctlrMatchEmpty(ctrl)
+		matches = set3ctlrMatchEmpty(ctrl)
 		if matches != 0 {
-			s = nextMatch(&matches)
+			s = set3nextMatch(&matches)
 			return g, s, false
 		}
 		g += 1 // linear probing
-		if g >= uint64(len(set.group)) {
+		if g >= uint64(len(Set3.group)) {
 			g = 0
 		}
 	}
 }
 
-func (set *Set[K]) nextSize() (n uint32) {
-	n = uint32(len(set.group)) * 2
-	if set.dead >= (set.resident / 2) {
-		n = uint32(len(set.group))
+func (Set3 *Set3[K]) nextSize() (n uint32) {
+	n = uint32(len(Set3.group)) * 2
+	if Set3.dead >= (Set3.resident / 2) {
+		n = uint32(len(Set3.group))
 	}
 	return
 }
 
-func (set *Set[K]) rehash(n uint32) {
-	//groups, ctrl := set.slots, set.ctrl
-	old_groups := set.group
-	set.hashFunction = maphash.NewSeed(set.hashFunction)
-	set.elementLimit = n * maxAvgGroupLoad
-	set.resident, set.dead = 0, 0
-	set.group = make([]Group[K], n)
-	for i := range len(set.group) {
-		group := &set.group[i]
-		for j := range groupSize {
+func (Set3 *Set3[K]) rehash(n uint32) {
+	//groups, ctrl := Set3.slots, Set3.ctrl
+	old_groups := Set3.group
+	Set3.hashFunction = maphash.NewSeed(Set3.hashFunction)
+	Set3.elementLimit = n * set3maxAvgGroupLoad
+	Set3.resident, Set3.dead = 0, 0
+	Set3.group = make([]set3Group[K], n)
+	for i := range len(Set3.group) {
+		group := &Set3.group[i]
+		for j := range set3groupSize {
 			group.ctrl[j] = kEmpty
 		}
 	}
-	grpCnt := uint64(len(set.group))
+	grpCnt := uint64(len(Set3.group))
 	for _, old_grp := range old_groups {
-		for s := range groupSize {
+		for s := range set3groupSize {
 			c := old_grp.ctrl[s]
 			if c == kEmpty || c == kDeleted {
 				continue
 			}
-			// inlined and reduced Add instead of set.Add(old_grp.slot[s])
+			// inlined and reduced Add instead of Set3.Add(old_grp.slot[s])
 
 			element := old_grp.slot[s]
 
-			hash := set.hashFunction.Hash(element)
+			hash := Set3.hashFunction.Hash(element)
 			H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 			H2 := int64(hash & 0x0000_0000_0000_007f)
-			grpIdx := H1 % uint64(len(set.group))
+			grpIdx := H1 % uint64(len(Set3.group))
 			stillSearchingSpace := true
 			for stillSearchingSpace {
-				ctrl := &(set.group[grpIdx].ctrl)
-				slot := &(set.group[grpIdx].slot)
+				ctrl := &(Set3.group[grpIdx].ctrl)
+				slot := &(Set3.group[grpIdx].slot)
 
-				// optimization: we know it cannot exist in the set already so skip
+				// optimization: we know it cannot exist in the Set3 already so skip
 				// searching for the hashcode and start searching for an empty slot
 				// immediately
-				matches := ctlrMatchEmpty(ctrl)
+				matches := set3ctlrMatchEmpty(ctrl)
 
 				if matches != 0 {
-					// empty spot -> element can't be in Set (see Contains) -> insert
-					s := nextMatch(&matches)
+					// empty spot -> element can't be in Set3 (see Contains) -> insert
+					s := set3nextMatch(&matches)
 					ctrl[s] = int8(H2)
 					slot[s] = element
-					set.resident++
+					Set3.resident++
 					stillSearchingSpace = false
 
 				}
@@ -338,18 +367,4 @@ func (set *Set[K]) rehash(n uint32) {
 			}
 		}
 	}
-}
-
-func (set *Set[K]) loadFactor() float32 {
-	slots := float32(len(set.group) * groupSize)
-	return float32(set.resident-set.dead) / slots
-}
-
-// numGroups returns the minimum number of groups needed to store |n| elems.
-func numGroups(n uint32) (groups uint32) {
-	groups = (n + maxAvgGroupLoad - 1) / maxAvgGroupLoad
-	if groups == 0 {
-		groups = 1
-	}
-	return
 }
