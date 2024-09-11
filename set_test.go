@@ -128,16 +128,16 @@ func genUint32Data(count int) (keys []uint32) {
 
 func testSetPut[K comparable](t *testing.T, keys []K) {
 	m := NewSet3[K](uint32(len(keys)))
-	assert.Equal(t, 0, m.Count())
+	assert.Equal(t, uint32(0), m.Count())
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, len(keys), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Count())
 	// overwrite
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, len(keys), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Count())
 	for _, key := range keys {
 		ok := m.Contains(key)
 		assert.True(t, ok)
@@ -158,33 +158,33 @@ func testSetHas[K comparable](t *testing.T, keys []K) {
 
 func testSetDelete[K comparable](t *testing.T, keys []K) {
 	m := NewSet3[K](uint32(len(keys)))
-	assert.Equal(t, 0, m.Count())
+	assert.Equal(t, uint32(0), m.Count())
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, len(keys), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Count())
 	for _, key := range keys {
 		m.Remove(key)
 		ok := m.Contains(key)
 		assert.False(t, ok)
 	}
-	assert.Equal(t, 0, m.Count())
+	assert.Equal(t, uint32(0), m.Count())
 	// put keys back after deleting them
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, len(keys), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Count())
 }
 
 func testSetClear[K comparable](t *testing.T, keys []K) {
 	m := NewSet3[K](0)
-	assert.Equal(t, 0, m.Count())
+	assert.Equal(t, uint32(0), m.Count())
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, len(keys), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Count())
 	m.Clear()
-	assert.Equal(t, 0, m.Count())
+	assert.Equal(t, uint32(0), m.Count())
 	for _, key := range keys {
 		ok := m.Contains(key)
 		assert.False(t, ok)
@@ -390,5 +390,41 @@ func TestImmutableRange(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestEquals(t *testing.T) {
+	set1 := NewSet3[int](10)
+	if !set1.Equals(set1) {
+		t.Errorf("Test case 1: Both sets are the same instance: Expected true, got false")
+	}
+
+	set2 := NewSet3[int](10)
+	if !set1.Equals(set2) {
+		t.Errorf("Test case 2: Both sets are empty but different instances: Expected true, got false")
+	}
+
+	set3 := NewSet3[int](10)
+	set3.Add(1)
+	if set1.Equals(set3) {
+		t.Errorf("Test case 3: Sets with different countsExpected false, got true")
+	}
+
+	set4 := NewSet3[int](10)
+	set4.Add(1)
+	if !set3.Equals(set4) {
+		t.Errorf("Test case 4: Sets with same elements: Expected true, got false")
+	}
+
+	set5 := NewSet3[int](20)
+	set5.Add(1)
+	if !set3.Equals(set4) {
+		t.Errorf("Test case 5: Sets with same elements but different capacities: Expected true, got false")
+	}
+
+	set6 := NewSet3[int](10)
+	set6.Add(2)
+	if set3.Equals(set6) {
+		t.Errorf("Test case 6: Sets with different elements: Expected false, got true")
 	}
 }

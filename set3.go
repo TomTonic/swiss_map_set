@@ -73,11 +73,8 @@ type Set3[K comparable] struct {
 }
 
 // NewSet3 constructs a Set3.
-func NewSet3[K comparable](sz uint32) (s *Set3[K]) {
-	reqNrOfGroups := int((float64(sz) + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad)
-	if reqNrOfGroups == 0 {
-		reqNrOfGroups = 1
-	}
+func NewSet3[K comparable](size uint32) (s *Set3[K]) {
+	reqNrOfGroups := calcReqNrOfGroups(size)
 	s = &Set3[K]{
 		hashFunction: maphash.NewHasher[K](),
 		elementLimit: uint32(float64(reqNrOfGroups) * set3maxAvgGroupLoad),
@@ -85,6 +82,23 @@ func NewSet3[K comparable](sz uint32) (s *Set3[K]) {
 	}
 	for i := range len(s.group) {
 		s.group[i].ctrl = set3AllEmpty
+	}
+	return
+}
+
+func calcReqNrOfGroups(size uint32) int {
+	reqNrOfGroups := int((float64(size) + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad)
+	if reqNrOfGroups == 0 {
+		reqNrOfGroups = 1
+	}
+	return reqNrOfGroups
+}
+
+// AsSet3 constructs a Set3 from an array/slice.
+func AsSet3[K comparable](data []K) (set *Set3[K]) {
+	set = NewSet3[K](uint32(len(data)))
+	for _, e := range data {
+		set.Add(e)
 	}
 	return
 }
@@ -134,6 +148,30 @@ func (Set3 *Set3[K]) Contains(element K) bool {
 			grpIdx = 0
 		}
 	}
+}
+
+func (this *Set3[K]) ContainsAll(that *Set3[K]) bool {
+	if this == that {
+		return true
+	}
+	if this.Count() < that.Count() {
+		return false
+	}
+	for e := range that.MutableRange() {
+		if !this.Contains(e) {
+			return false
+		}
+	}
+	return true
+}
+
+func (this *Set3[K]) ContainsAllFrom(data []K) bool {
+	for _, e := range data {
+		if !this.Contains(e) {
+			return false
+		}
+	}
+	return true
 }
 
 func (this *Set3[K]) Equals(that *Set3[K]) bool {
@@ -193,10 +231,10 @@ func (s *Set3[K]) ImmutableRange() iter.Seq[K] {
 	}
 }
 
-// Add attempts to insert |key| and |value|
+// Add attempts to insert |element|
 func (Set3 *Set3[K]) Add(element K) {
 	if Set3.resident >= Set3.elementLimit {
-		Set3.rehash(Set3.nextSize())
+		Set3.rehashToNumGroups(Set3.nextSize())
 	}
 	hash := Set3.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
@@ -237,6 +275,33 @@ func (Set3 *Set3[K]) Add(element K) {
 	}
 }
 
+// Attempts to insert all elements from |that| into |this| Set3.
+func (this *Set3[K]) AddAll(that *Set3[K]) {
+	for e := range that.MutableRange() {
+		this.Add(e)
+	}
+}
+
+// Attempts to insert all elements from |that| into |this| Set3.
+func (this *Set3[K]) AddAllFrom(data []K) {
+	for _, e := range data {
+		this.Add(e)
+	}
+}
+
+// Creates a new Set3 as a mathematical union of the elements from |this| and |that|.
+func (this *Set3[K]) Union(that *Set3[K]) *Set3[K] {
+	potentialSize := this.Count() + that.Count()
+	result := NewSet3[K](potentialSize)
+	for e := range this.MutableRange() {
+		result.Add(e)
+	}
+	for e := range that.MutableRange() {
+		result.Add(e)
+	}
+	return result
+}
+
 func setCTRLat(ctrl, val uint64, pos int) uint64 {
 	shift := pos << 3                // *8
 	ctrl &= ^(uint64(0xFF) << shift) // clear byte
@@ -253,14 +318,14 @@ func elementAt(ctrl uint64, pos int) bool {
 }
 
 // Remove attempts to remove |element|, returns true if the |element| was in the |Set3|
-func (Set3 *Set3[K]) Remove(element K) bool {
-	hash := Set3.hashFunction.Hash(element)
+func (this *Set3[K]) Remove(element K) bool {
+	hash := this.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpCnt := uint64(len(Set3.group))
+	grpCnt := uint64(len(this.group))
 	grpIdx := H1 % grpCnt
 	for {
-		group := &Set3.group[grpIdx]
+		group := &this.group[grpIdx]
 		ctrl := group.ctrl
 		slot := &(group.slot)
 		matches := set3ctlrMatchH2(ctrl, H2)
@@ -277,10 +342,19 @@ func (Set3 *Set3[K]) Remove(element K) bool {
 				// cause premature termination of probes into |g|.
 				if set3ctlrMatchEmpty(ctrl) != 0 {
 					group.ctrl = setCTRLat(ctrl, set3Empty, s)
-					Set3.resident--
+					this.resident--
 				} else {
 					group.ctrl = setCTRLat(ctrl, set3Deleted, s)
-					Set3.dead++
+					this.dead++
+					/*
+						// unfortunately, this is an invalid optimization, as the algorithm might stop searching for elements to early.
+						// if they spilled over in the next group, we unfortunately need all the tumbstones...
+						if group.ctrl == set3AllDeleted {
+							group.ctrl = set3AllEmpty
+							this.dead -= set3groupSize
+							this.resident -= set3groupSize
+						}
+					*/
 				}
 				var k K
 				slot[s] = k
@@ -302,7 +376,33 @@ func (Set3 *Set3[K]) Remove(element K) bool {
 	}
 }
 
-// Clear removes all elements from the Map.
+// Attempts to insert all elements from |that| into |this| Set3.
+func (this *Set3[K]) RemoveAll(that *Set3[K]) {
+	for e := range that.MutableRange() {
+		this.Remove(e)
+	}
+}
+
+// Attempts to insert all elements from |that| into |this| Set3.
+func (this *Set3[K]) RemoveAllFrom(data []K) {
+	for _, e := range data {
+		this.Remove(e)
+	}
+}
+
+// Creates a new Set3 as a mathematical difference between |this| and |that|; i.e. the result contains nodes that are in |this| but not in |that|.
+func (this *Set3[K]) Difference(that *Set3[K]) *Set3[K] {
+	potentialSize := this.Count()
+	result := NewSet3[K](potentialSize)
+	for e := range this.MutableRange() {
+		if !that.Contains(e) {
+			result.Add(e)
+		}
+	}
+	return result
+}
+
+// Clear removes all elements from the Set3.
 func (Set3 *Set3[K]) Clear() {
 	var k K
 	for grpidx := range len(Set3.group) {
@@ -315,15 +415,38 @@ func (Set3 *Set3[K]) Clear() {
 	Set3.resident, Set3.dead = 0, 0
 }
 
+// Creates a new Set3 as a mathematical intersection between |this| and |that|; i.e. the result contains nodes that are in |this| and in |that|.
+func (this *Set3[K]) Intersection(that *Set3[K]) *Set3[K] {
+	var smallerSet *Set3[K]
+	var biggerSet *Set3[K]
+
+	if this.Count() < that.Count() {
+		smallerSet = this
+		biggerSet = that
+	} else {
+		smallerSet = that
+		biggerSet = this
+	}
+
+	potentialSize := smallerSet.Count()
+	result := NewSet3[K](potentialSize)
+	for e := range smallerSet.ImmutableRange() {
+		if !biggerSet.Contains(e) {
+			result.Add(e)
+		}
+	}
+	return result
+}
+
 // Count returns the number of elements in the Map.
-func (Set3 *Set3[K]) Count() int {
-	return int(Set3.resident - Set3.dead)
+func (Set3 *Set3[K]) Count() uint32 {
+	return Set3.resident - Set3.dead
 }
 
 // Capacity returns the number of additional elements
 // the can be added to the Map before resizing.
-func (Set3 *Set3[K]) Capacity() int {
-	return int(Set3.elementLimit - Set3.resident)
+func (Set3 *Set3[K]) Capacity() uint32 {
+	return Set3.elementLimit - Set3.resident
 }
 
 // find returns the location of |key| if present, or its insertion location if absent.
@@ -367,16 +490,30 @@ func (Set3 *Set3[K]) nextSize() (n uint32) {
 	return
 }
 
-func (Set3 *Set3[K]) rehash(n uint32) {
-	old_groups := Set3.group
-	Set3.hashFunction = maphash.NewSeed(Set3.hashFunction)
-	Set3.elementLimit = uint32(float64(n) * set3maxAvgGroupLoad)
-	Set3.resident, Set3.dead = 0, 0
-	Set3.group = make([]set3Group[K], n)
-	for i := range len(Set3.group) {
-		Set3.group[i].ctrl = set3AllEmpty
+// Rorganize Set3 for better performance for current number of elements.
+func (this *Set3[K]) Rehash() {
+	this.rehashToNumGroups(this.Count())
+}
+
+// Rorganize Set3 for better performance. If |newSize| is smaller than the current number of elements in the |Set3|, this function does nothing.
+func (this *Set3[K]) RehashTo(newSize uint32) {
+	if newSize < this.Count() {
+		return
 	}
-	grpCnt := uint64(len(Set3.group))
+	newNumGroups := uint32(calcReqNrOfGroups(newSize))
+	this.rehashToNumGroups(newNumGroups)
+}
+
+func (this *Set3[K]) rehashToNumGroups(newNumGroups uint32) {
+	old_groups := this.group
+	this.hashFunction = maphash.NewSeed(this.hashFunction)
+	this.elementLimit = uint32(float64(newNumGroups) * set3maxAvgGroupLoad)
+	this.resident, this.dead = 0, 0
+	this.group = make([]set3Group[K], newNumGroups)
+	for i := range len(this.group) {
+		this.group[i].ctrl = set3AllEmpty
+	}
+	grpCnt := uint64(len(this.group))
 	for _, old_grp := range old_groups {
 		if old_grp.ctrl&set3hiBits != set3hiBits { // not all empty or deleted
 			for s := range set3groupSize {
@@ -384,13 +521,13 @@ func (Set3 *Set3[K]) rehash(n uint32) {
 					// inlined and reduced Add instead of Set3.Add(old_grp.slot[s])
 					element := old_grp.slot[s]
 
-					hash := Set3.hashFunction.Hash(element)
+					hash := this.hashFunction.Hash(element)
 					H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 					H2 := (hash & 0x0000_0000_0000_007f)
-					grpIdx := H1 % uint64(len(Set3.group))
+					grpIdx := H1 % uint64(len(this.group))
 					stillSearchingSpace := true
 					for stillSearchingSpace {
-						group := &Set3.group[grpIdx]
+						group := &this.group[grpIdx]
 						ctrl := group.ctrl
 						slot := &(group.slot)
 
@@ -404,7 +541,7 @@ func (Set3 *Set3[K]) rehash(n uint32) {
 							s := set3nextMatch(&matches)
 							group.ctrl = setCTRLat(ctrl, H2, s)
 							slot[s] = element
-							Set3.resident++
+							this.resident++
 							stillSearchingSpace = false
 
 						}
