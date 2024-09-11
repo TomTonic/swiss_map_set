@@ -1,0 +1,1 @@
+go test -benchmem -benchtime=4s -timeout 120m -run="^$" -bench "^(BenchmarkSet3Find|BenchmarkNativeMapFind)$" github.com/TomTonic/Set3

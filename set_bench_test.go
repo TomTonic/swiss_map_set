@@ -57,11 +57,11 @@ func BenchmarkInt64Sets(b *testing.B) {
 }
 
 func TestMemoryFootprintSet(t *testing.T) {
-	//t.Skip("unskip for memory footprint stats")
+	//t.Skip("unskip for memory footprint stats - runs 1-2 minutes")
 	var samples []float64
-	for n := 10; n <= 100_000; n += 20 {
+	for n := 10; n <= 350_000; n += 20 {
 		b1 := testing.Benchmark(func(b *testing.B) {
-			// max load factor 7/8
+			// max load factor 6.66666/8
 			m := NewSet3[int](uint32(n))
 			require.NotNil(b, m)
 		})

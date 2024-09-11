@@ -15,15 +15,16 @@
 package Set3
 
 import (
+	"iter"
 	"math/bits"
-	"math/rand/v2"
 
 	"github.com/dolthub/maphash"
 )
 
 const (
 	set3groupSize       = 8
-	set3maxAvgGroupLoad = 7
+	set3maxAvgGroupLoad = 6.5
+	//set3maxAvgGroupLoad = float64(20) / float64(3) // 6.66667
 
 	set3maxLoadFactor = float32(set3maxAvgGroupLoad) / float32(set3groupSize)
 
@@ -73,17 +74,28 @@ type Set3[K comparable] struct {
 
 // NewSet3 constructs a Set3.
 func NewSet3[K comparable](sz uint32) (s *Set3[K]) {
-	reqNrOfGroups := (sz + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad
+	reqNrOfGroups := int((float64(sz) + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad)
 	if reqNrOfGroups == 0 {
 		reqNrOfGroups = 1
 	}
 	s = &Set3[K]{
 		hashFunction: maphash.NewHasher[K](),
-		elementLimit: reqNrOfGroups * set3maxAvgGroupLoad,
+		elementLimit: uint32(float64(reqNrOfGroups) * set3maxAvgGroupLoad),
 		group:        make([]set3Group[K], reqNrOfGroups),
 	}
 	for i := range len(s.group) {
 		s.group[i].ctrl = set3AllEmpty
+	}
+	return
+}
+
+func (set3 *Set3[K]) Clone() (s *Set3[K]) {
+	s = &Set3[K]{
+		hashFunction: set3.hashFunction,
+		elementLimit: set3.elementLimit,
+		resident:     set3.resident,
+		dead:         set3.dead,
+		group:        set3.group,
 	}
 	return
 }
@@ -120,6 +132,63 @@ func (Set3 *Set3[K]) Contains(element K) bool {
 		grpIdx += 1 // carousel through all groups
 		if grpIdx >= grpCnt {
 			grpIdx = 0
+		}
+	}
+}
+
+func (this *Set3[K]) Equals(that *Set3[K]) bool {
+	if this == that {
+		return true
+	}
+	if this.Count() != that.Count() {
+		return false
+	}
+	for elem := range that.MutableRange() {
+		if !this.Contains(elem) {
+			return false
+		}
+	}
+	return true
+}
+
+// Iterates over all elements in this |Set3|.
+// Caution: If the |Set3| is changed during the iteration, the result may be arbitrary.
+// If the |Set3| might get changed during the itration, you might prefer ImmutableRange()
+func (s *Set3[K]) MutableRange() iter.Seq[K] {
+	return func(yield func(K) bool) {
+		for _, group := range s.group {
+			ctrl := group.ctrl
+			if ctrl&set3hiBits != set3hiBits { // not all empty or deleted
+				slot := &(group.slot)
+				for i := 0; i < set3groupSize; i++ {
+					if elementAt(ctrl, i) {
+						if !yield(slot[i]) {
+							return
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// Iterates over all elements in this |Set3|. Makes an internal copy of the stored elements first.
+// To avoid this copy, choose MutableRange()
+func (s *Set3[K]) ImmutableRange() iter.Seq[K] {
+	return func(yield func(K) bool) {
+		groups := s.group
+		for _, group := range groups {
+			ctrl := group.ctrl
+			if ctrl&set3hiBits != set3hiBits { // not all empty or deleted
+				slot := &(group.slot)
+				for i := 0; i < set3groupSize; i++ {
+					if elementAt(ctrl, i) {
+						if !yield(slot[i]) {
+							return
+						}
+					}
+				}
+			}
 		}
 	}
 }
@@ -233,36 +302,6 @@ func (Set3 *Set3[K]) Remove(element K) bool {
 	}
 }
 
-// Iter iterates the elements of the Map, passing them to the callback.
-// It guarantees that any key in the Map will be visited only once, and
-// for un-mutated Maps, every key will be visited once. If the Map is
-// Mutated during iteration, mutations will be reflected on return from
-// Iter, but the Set3 of keys visited by Iter is non-deterministic.
-func (Set3 *Set3[K]) Iter(callBack func(element K) (stop bool)) {
-	// take a consistent view of the table in case
-	// we rehash during iteration
-	data := Set3.group
-	// pick a random starting group
-	grpIdx := rand.Uint32N(uint32(len(data)))
-	for n := 0; n < len(data); n++ {
-		group := &data[grpIdx]
-		ctrl := group.ctrl
-		slot := &(group.slot)
-		for i := range set3groupSize {
-			if elementAt(ctrl, i) {
-				k := slot[i]
-				if stop := callBack(k); stop {
-					return
-				}
-			}
-		}
-		grpIdx++
-		if grpIdx >= uint32(len(data)) {
-			grpIdx = 0
-		}
-	}
-}
-
 // Clear removes all elements from the Map.
 func (Set3 *Set3[K]) Clear() {
 	var k K
@@ -329,10 +368,9 @@ func (Set3 *Set3[K]) nextSize() (n uint32) {
 }
 
 func (Set3 *Set3[K]) rehash(n uint32) {
-	//groups, ctrl := Set3.slots, Set3.ctrl
 	old_groups := Set3.group
 	Set3.hashFunction = maphash.NewSeed(Set3.hashFunction)
-	Set3.elementLimit = n * set3maxAvgGroupLoad
+	Set3.elementLimit = uint32(float64(n) * set3maxAvgGroupLoad)
 	Set3.resident, Set3.dead = 0, 0
 	Set3.group = make([]set3Group[K], n)
 	for i := range len(Set3.group) {
