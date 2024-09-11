@@ -1,6 +1,6 @@
 # Set3
 
-Set3 is a fast and pure set implmentation in and for Golang. I wrote it as an alternative to set implementations based on `map[type]struct{}`. Set3 is a faster and uses over 40% less memory than `map[type]struct{}`. As hash function, Set3 uses the built-in hash function of Golang via [dolthub/maphash](https://github.com/dolthub/maphash).
+Set3 is a fast and pure set implmentation in and for Golang. I wrote it as an alternative to set implementations based on `map[type]struct{}`. Set3 is a little faster and uses 40% less memory than `map[type]struct{}`. As hash function, Set3 uses the built-in hash function of Golang via [dolthub/maphash](https://github.com/dolthub/maphash).
 
 The code is derived from [SwissMap](https://github.com/dolthub/swiss) and it is implementing the "Fast, Efficient, Cache-friendly Hash Table" found in [Abseil](https://abseil.io/blog/20180927-swisstables). For details on the algorithm see the [CppCon 2017 talk by Matt Kulukundis](https://www.youtube.com/watch?v=ncHmEUmJZf4). The dependency on x86 assembler for [SSE2/SSE3](https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions) instructions has been removed for portability and speed (yes, the code is faster without SSE).
 
@@ -27,11 +27,5 @@ Total time/additional memory/memory allocations for inserting different numbers 
 ### Searching Nodes in a Populated Set
 
 Total time for searching 5000 elements in sets of different sizes, 30% hit ratio.
-
-![perf_searching](https://github.com/user-attachments/assets/00d3f105-bfe9-4fea-baaf-ff6ff4f05bbd)
-
-#### TODO
-
-![Screenshot 2024-09-09 202238](https://github.com/user-attachments/assets/23f298a1-0b3e-4e17-b5fb-8d058043a834)
-![Screenshot 2024-09-09 204215](https://github.com/user-attachments/assets/be1aa622-8084-463b-9605-5fb0a97b8f58)
-Peak at ((2^n)-1)*7?
+Tests performed with commit id ceed986615c10f0b1493b855f703f880c1dedc9b, reduced maxAvgGroupLoad to 6.5, i.e. same as `map[type]struct{}`. Mean size ratio drops to 0.608.
+![Screenshot 2024-09-11 123416](https://github.com/user-attachments/assets/03df5b2d-4165-4a2c-b1cb-c42f8f923e45)
