@@ -45,7 +45,7 @@ func fuzzTestStringSet(t *testing.T, keySz, init, count uint32) {
 	if count > limit || init > limit {
 		t.Skip()
 	}
-	m := NewSet3[string](init)
+	m := NewSet3WithSize[string](init)
 	if count == 0 {
 		return
 	}

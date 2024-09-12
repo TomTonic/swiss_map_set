@@ -126,8 +126,12 @@ func (this Set3[K]) String() string {
 	return builder.String()
 }
 
-// NewSet3 constructs a Set3.
-func NewSet3[K comparable](size uint32) (s *Set3[K]) {
+func NewSet3[K comparable]() (s *Set3[K]) {
+	return NewSet3WithSize[K](21)
+}
+
+// NewSet3WithSize constructs a Set3.
+func NewSet3WithSize[K comparable](size uint32) (s *Set3[K]) {
 	reqNrOfGroups := calcReqNrOfGroups(size)
 	s = &Set3[K]{
 		hashFunction: maphash.NewHasher[K](),
@@ -150,7 +154,7 @@ func calcReqNrOfGroups(size uint32) int {
 
 // AsSet3 constructs a Set3 from an array/slice.
 func AsSet3[K comparable](data []K) (set *Set3[K]) {
-	set = NewSet3[K](uint32(len(data)))
+	set = NewSet3WithSize[K](uint32(len(data)))
 	for _, e := range data {
 		set.Add(e)
 	}
@@ -346,7 +350,7 @@ func (this *Set3[K]) AddAllFrom(data []K) {
 // Creates a new Set3 as a mathematical union of the elements from |this| and |that|.
 func (this *Set3[K]) Union(that *Set3[K]) *Set3[K] {
 	potentialSize := this.Count() + that.Count()
-	result := NewSet3[K](potentialSize)
+	result := NewSet3WithSize[K](potentialSize)
 	for e := range this.MutableRange() {
 		result.Add(e)
 	}
@@ -447,7 +451,7 @@ func (this *Set3[K]) RemoveAllFrom(data []K) {
 // Creates a new Set3 as a mathematical difference between |this| and |that|; i.e. the result contains nodes that are in |this| but not in |that|.
 func (this *Set3[K]) Difference(that *Set3[K]) *Set3[K] {
 	potentialSize := this.Count()
-	result := NewSet3[K](potentialSize)
+	result := NewSet3WithSize[K](potentialSize)
 	for e := range this.MutableRange() {
 		if !that.Contains(e) {
 			result.Add(e)
@@ -483,7 +487,7 @@ func (this *Set3[K]) Intersection(that *Set3[K]) *Set3[K] {
 	}
 
 	potentialSize := smallerSet.Count()
-	result := NewSet3[K](potentialSize)
+	result := NewSet3WithSize[K](potentialSize)
 	for e := range smallerSet.ImmutableRange() {
 		if !biggerSet.Contains(e) {
 			result.Add(e)
