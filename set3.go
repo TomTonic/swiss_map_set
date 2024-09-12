@@ -15,8 +15,10 @@
 package Set3
 
 import (
+	"fmt"
 	"iter"
 	"math/bits"
+	"strings"
 
 	"github.com/dolthub/maphash"
 )
@@ -62,6 +64,42 @@ type set3Group[K comparable] struct {
 	slot [set3groupSize]K
 }
 
+var set3hextable = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}
+
+func (g set3Group[k]) String() string {
+	var builder strings.Builder
+	var mask uint64 = 0xFF
+	shr := 0
+	builder.WriteString("[")
+	for i := range set3groupSize {
+		b := g.ctrl & mask
+		b >>= shr
+		mask <<= 8
+		shr += 8
+		switch b {
+		case set3Empty:
+			builder.WriteString("__")
+		case set3Deleted:
+			builder.WriteString("XX")
+		default:
+			builder.WriteString(set3hextable[b>>4])
+			builder.WriteString(set3hextable[b&0x0f])
+		}
+		if i < set3groupSize-1 {
+			builder.WriteString("|")
+		}
+	}
+	builder.WriteString("]{")
+	for i, v := range g.slot {
+		builder.WriteString(fmt.Sprintf("%v", v))
+		if i < set3groupSize-1 {
+			builder.WriteString("|")
+		}
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
 // Set3 is an open-addressing Set3
 // based on Abseil's flat_hash_map.
 type Set3[K comparable] struct {
@@ -70,6 +108,22 @@ type Set3[K comparable] struct {
 	dead         uint32
 	elementLimit uint32
 	group        []set3Group[K]
+}
+
+func (this Set3[K]) String() string {
+	var builder strings.Builder
+	builder.WriteString("{")
+	total := this.Count()
+	cnt := uint32(0)
+	for e := range this.MutableRange() {
+		builder.WriteString(fmt.Sprintf("%v", e))
+		if cnt < total-1 {
+			builder.WriteString(",")
+		}
+		cnt++
+	}
+	builder.WriteString("}")
+	return builder.String()
 }
 
 // NewSet3 constructs a Set3.
