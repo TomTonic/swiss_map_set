@@ -517,7 +517,8 @@ func (Set3 *Set3[K]) nextSize() (n uint32) {
 
 // Rorganize Set3 for better performance for current number of elements.
 func (this *Set3[K]) Rehash() {
-	this.rehashToNumGroups(this.Count())
+	numGroups := uint32(calcReqNrOfGroups(this.Count()))
+	this.rehashToNumGroups(numGroups)
 }
 
 // Rorganize Set3 for better performance. If |newSize| is smaller than the current number of elements in the |Set3|, this function does nothing.

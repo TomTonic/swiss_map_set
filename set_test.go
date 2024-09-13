@@ -666,3 +666,24 @@ func TestSet3Difference(t *testing.T) {
 	i2 := set1.Difference(empty)
 	assert.True(t, set1.Equals(i2), "set1 shall be equal to i2")
 }
+
+func TestRehash(t *testing.T) {
+	data := genUint32Data(53)
+	set := AsSet3(data)
+	assert.True(t, len(set.group) == 9, "set shall contain 9 groups")
+	set.RehashTo(200)
+	assert.True(t, len(set.group) == 31, "set shall contain 30 groups")
+	for _, e := range data {
+		assert.True(t, set.Contains(e), "set shall contain %v", e)
+	}
+	set.RehashTo(20)
+	assert.True(t, len(set.group) == 31, "set shall contain 30 groups")
+	for _, e := range data {
+		assert.True(t, set.Contains(e), "set shall contain %v", e)
+	}
+	set.Rehash()
+	assert.True(t, len(set.group) == 9, "set shall contain 9 groups")
+	for _, e := range data {
+		assert.True(t, set.Contains(e), "set shall contain %v", e)
+	}
+}
