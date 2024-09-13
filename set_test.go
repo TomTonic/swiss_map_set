@@ -454,17 +454,17 @@ func TestSet3GroupString(t *testing.T) {
 		{
 			name:  "Empty slots",
 			group: set3Group[int]{ctrl: set3AllEmpty, slot: [set3groupSize]int{0, 0, 0, 0, 0, 0, 0, 0}},
-			want:  "[__|__|__|__|__|__|__|__]{0|0|0|0|0|0|0|0}",
+			want:  "[__|__|__|__|__|__|__|__]->{0|0|0|0|0|0|0|0}",
 		},
 		{
 			name:  "Deleted slots",
 			group: set3Group[int]{ctrl: set3AllDeleted, slot: [set3groupSize]int{0, 0, 0, 0, 0, 0, 0, 0}},
-			want:  "[XX|XX|XX|XX|XX|XX|XX|XX]{0|0|0|0|0|0|0|0}",
+			want:  "[XX|XX|XX|XX|XX|XX|XX|XX]->{0|0|0|0|0|0|0|0}",
 		},
 		{
 			name:  "Mixed slots",
 			group: set3Group[int]{ctrl: 0x71727374757680FE, slot: [set3groupSize]int{1, 2, 3, 4, 5, 6, 7, 8}},
-			want:  "[XX|__|76|75|74|73|72|71]{1|2|3|4|5|6|7|8}",
+			want:  "[XX|__|76|75|74|73|72|71]->{1|2|3|4|5|6|7|8}",
 		},
 	}
 
@@ -529,4 +529,83 @@ func TestSet3Clone(t *testing.T) {
 	set1.Add(4)
 	set2.Add(5)
 	assert.False(t, set1.Equals(set2), "set2 shall not be equal to set1 anymore")
+}
+
+func TestSet3ContainsAll(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3})
+	set2 := AsSet3([]int{1, 2, 3})
+	assert.True(t, set1.ContainsAll(set2), "set2 shall be a subset of set1")
+	set2.Remove(3)
+	assert.True(t, set1.ContainsAll(set2), "set2 shall be a subset of set1")
+	set2.Remove(2)
+	assert.True(t, set1.ContainsAll(set2), "set2 shall be a subset of set1")
+	set2.Remove(1)
+	assert.True(t, set1.ContainsAll(set2), "set2 shall be a subset of set1")
+	empty := NewSet3[int]()
+	assert.True(t, empty.ContainsAll(set2), "set2 shall be a subset of an empty set")
+	set3 := set1.Clone()
+	set3.Add(4)
+	assert.False(t, set1.ContainsAll(set3), "set3 shall not be a subset of set1")
+	assert.False(t, empty.ContainsAll(set3), "set3 shall be a subset of an empty set")
+	assert.True(t, set1.ContainsAll(set1), "set1 shall be a subset of set1")
+	set4 := set1.Clone()
+	assert.True(t, set1.ContainsAll(set4), "set4 shall be a subset of set1")
+	set5 := AsSet3([]int{3, 4, 5})
+	assert.False(t, set1.ContainsAll(set5), "set5 shall not be a subset of set1")
+}
+
+func TestSet3ContainsAllFrom(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3})
+	assert.True(t, set1.ContainsAllFrom([]int{1, 2}), "[]int{1,2} shall be a subset of set1")
+	assert.True(t, set1.ContainsAllFrom([]int{2}), "[]int{2} shall be a subset of set1")
+	assert.True(t, set1.ContainsAllFrom([]int{}), "[]int{} shall be a subset of set1")
+	empty := NewSet3[int]()
+	assert.True(t, empty.ContainsAllFrom([]int{}), "[]int{} shall be a subset of empty")
+	assert.True(t, set1.ContainsAllFrom([]int{2, 2, 2, 2, 2, 2}), "[]int{2,2,2,2,2,2} shall be a subset of set1")
+	assert.False(t, set1.ContainsAllFrom([]int{2, 4}), "[]int{2,4} shall be a subset of set1")
+	assert.False(t, set1.ContainsAllFrom([]int{4}), "[]int{4} shall be a subset of set1")
+}
+
+func TestSet3Union(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3})
+	set2 := AsSet3([]int{4, 5, 6})
+	set3 := AsSet3([]int{1, 2, 3, 4, 5, 6})
+	u1 := set1.Union(set2)
+	assert.False(t, set1.Equals(u1), "set1 shall not be altered by union")
+	assert.True(t, u1.Equals(set3), "u1 and set3 shall be equal")
+	u2 := set2.Union(set1)
+	assert.True(t, u2.Equals(set3), "u2 and set3 shall be equal")
+	empty := NewSet3[int]()
+	u3 := set1.Union(empty)
+	assert.True(t, set1.Equals(u3), "set1 shall be equal to u3")
+	u4 := empty.Union(set1)
+	assert.True(t, set1.Equals(u4), "set1 shall be equal to u4")
+	set4 := AsSet3([]int{2, 3, 4, 5, 6})
+	set5 := AsSet3([]int{1, 2, 3, 4, 5, 6})
+	u5 := set1.Union(set4)
+	assert.True(t, u5.Equals(set5), "u5 and set5 shall be equal")
+}
+
+func TestSet3AddAll(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3})
+	set2 := AsSet3([]int{4, 5, 6})
+	set3 := AsSet3([]int{1, 2, 3, 4, 5, 6})
+	set1.AddAll(set2)
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	empty := NewSet3[int]()
+	set1.AddAll(empty)
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.AddAll(set2)
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+}
+
+func TestSet3AddAllFrom(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3})
+	set3 := AsSet3([]int{1, 2, 3, 4, 5, 6})
+	set1.AddAllFrom([]int{4, 5, 6})
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.AddAllFrom([]int{})
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.AddAllFrom([]int{4, 5, 6})
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
 }

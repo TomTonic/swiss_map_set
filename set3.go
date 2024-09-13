@@ -89,7 +89,7 @@ func (g set3Group[k]) String() string {
 			builder.WriteString("|")
 		}
 	}
-	builder.WriteString("]{")
+	builder.WriteString("]->{")
 	for i, v := range g.slot {
 		builder.WriteString(fmt.Sprintf("%v", v))
 		if i < set3groupSize-1 {
