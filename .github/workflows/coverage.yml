@@ -1,0 +1,28 @@
+name: Test Coverage
+
+on: [push, pull_request]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.23.1'
+
+      - name: Run tests and generate coverage report
+        run: go test -timeout 30s -run ^(TestSet3|TestMutableRange|TestImmutableRange|TestEquals|TestAsSet3|TestSet3GroupString|TestSet3String|TestSet3Clone|TestSet3ContainsAll|TestSet3ContainsAllFrom|TestSet3Union|TestSet3AddAll|TestSet3AddAllFrom|TestSet3Intersection|TestSet3RemoveAll|TestSet3RemoveAllFrom|TestSet3Difference|TestRehash)$ github.com/TomTonic/Set3 -coverprofile=coverage.out
+
+      - name: Generate coverage badge
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          profile: cover.out
+          local-prefix: github.com/TomTonic/Set3
+          threshold-file: 80
+          threshold-package: 80
+          threshold-total: 95
+          git-branch: badges 
