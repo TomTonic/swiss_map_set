@@ -495,7 +495,7 @@ func (this *Set3[K]) Intersection(that *Set3[K]) *Set3[K] {
 	potentialSize := smallerSet.Count()
 	result := NewSet3WithSize[K](potentialSize)
 	for e := range smallerSet.ImmutableRange() {
-		if !biggerSet.Contains(e) {
+		if biggerSet.Contains(e) {
 			result.Add(e)
 		}
 	}
@@ -505,45 +505,6 @@ func (this *Set3[K]) Intersection(that *Set3[K]) *Set3[K] {
 // Count returns the number of elements in the Map.
 func (Set3 *Set3[K]) Count() uint32 {
 	return Set3.resident - Set3.dead
-}
-
-// Capacity returns the number of additional elements
-// the can be added to the Map before resizing.
-func (Set3 *Set3[K]) Capacity() uint32 {
-	return Set3.elementLimit - Set3.resident
-}
-
-// find returns the location of |key| if present, or its insertion location if absent.
-// for performance, find is manually inlined into public methods.
-func (Set3 *Set3[K]) find(key K) (g uint64, s int, ok bool) {
-	//g = probeStart2(hi, len(Set3.data))
-	hash := Set3.hashFunction.Hash(key)
-	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
-	H2 := hash & 0x0000_0000_0000_007f
-	g = H1 % uint64(len(Set3.group))
-	for {
-		group := &Set3.group[g]
-		ctrl := group.ctrl
-		slot := &(group.slot)
-		matches := set3ctlrMatchH2(ctrl, H2)
-		for matches != 0 {
-			s = set3nextMatch(&matches)
-			if key == slot[s] {
-				return g, s, true
-			}
-		}
-		// |key| is not in group |g|,
-		// stop probing if we see an empty slot
-		matches = set3ctlrMatchEmpty(ctrl)
-		if matches != 0 {
-			s = set3nextMatch(&matches)
-			return g, s, false
-		}
-		g += 1 // linear probing
-		if g >= uint64(len(Set3.group)) {
-			g = 0
-		}
-	}
 }
 
 func (Set3 *Set3[K]) nextSize() (n uint32) {

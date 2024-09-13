@@ -609,3 +609,60 @@ func TestSet3AddAllFrom(t *testing.T) {
 	set1.AddAllFrom([]int{4, 5, 6})
 	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
 }
+
+func TestSet3Intersection(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3, 4})
+	set2 := AsSet3([]int{3, 4, 5, 6})
+	set3 := AsSet3([]int{3, 4})
+	i1 := set1.Intersection(set2)
+	assert.False(t, set1.Equals(i1), "set1 shall not be altered by intersection")
+	assert.True(t, i1.Equals(set3), "i1 and set3 shall be equal")
+
+	empty := NewSet3[int]()
+	i2 := set1.Intersection(empty)
+	assert.True(t, empty.Equals(i2), "empty shall be equal to i2")
+	i3 := empty.Intersection(set1)
+	assert.True(t, empty.Equals(i3), "empty shall be equal to i3")
+
+	set4 := AsSet3([]int{1, 2, 3})
+	set5 := AsSet3([]int{4, 5, 6})
+	i4 := set4.Intersection(set5)
+	assert.True(t, empty.Equals(i4), "empty shall be equal to i4")
+}
+
+func TestSet3RemoveAll(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3})
+	set2 := AsSet3([]int{3, 4, 5, 6})
+	set3 := AsSet3([]int{1, 2})
+	set1.RemoveAll(set2)
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	empty := NewSet3[int]()
+	set1.RemoveAll(empty)
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.RemoveAll(set3)
+	assert.True(t, set1.Equals(empty), "set1 and empty shall be equal")
+}
+
+func TestSet3RemoveAllFrom(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3, 4, 5, 6})
+	set3 := AsSet3([]int{1, 2, 3, 4})
+	set1.RemoveAllFrom([]int{5, 6, 7, 8})
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.RemoveAllFrom([]int{})
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.RemoveAllFrom([]int{9, 10})
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+}
+
+func TestSet3Difference(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3, 4})
+	set2 := AsSet3([]int{3, 4, 5, 6})
+	set3 := AsSet3([]int{1, 2})
+	i1 := set1.Difference(set2)
+	assert.False(t, set1.Equals(i1), "set1 shall not be altered by intersection")
+	assert.True(t, i1.Equals(set3), "i1 and set3 shall be equal")
+
+	empty := NewSet3[int]()
+	i2 := set1.Difference(empty)
+	assert.True(t, set1.Equals(i2), "set1 shall be equal to i2")
+}
