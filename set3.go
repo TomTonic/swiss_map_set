@@ -167,9 +167,15 @@ func (set3 *Set3[K]) Clone() (s *Set3[K]) {
 		elementLimit: set3.elementLimit,
 		resident:     set3.resident,
 		dead:         set3.dead,
-		group:        set3.group,
+		group:        set3.fullCopyGroups(),
 	}
 	return
+}
+
+func (set3 *Set3[K]) fullCopyGroups() []set3Group[K] {
+	result := make([]set3Group[K], len(set3.group))
+	copy(result, set3.group)
+	return result
 }
 
 // Contains returns true if |element| is present in the |Set3|.
@@ -272,7 +278,7 @@ func (s *Set3[K]) MutableRange() iter.Seq[K] {
 // To avoid this copy, choose MutableRange()
 func (s *Set3[K]) ImmutableRange() iter.Seq[K] {
 	return func(yield func(K) bool) {
-		groups := s.group
+		groups := s.fullCopyGroups()
 		for _, group := range groups {
 			ctrl := group.ctrl
 			if ctrl&set3hiBits != set3hiBits { // not all empty or deleted
@@ -563,7 +569,7 @@ func (this *Set3[K]) RehashTo(newSize uint32) {
 }
 
 func (this *Set3[K]) rehashToNumGroups(newNumGroups uint32) {
-	old_groups := this.group
+	old_groups := this.fullCopyGroups()
 	this.hashFunction = maphash.NewSeed(this.hashFunction)
 	this.elementLimit = uint32(float64(newNumGroups) * set3maxAvgGroupLoad)
 	this.resident, this.dead = 0, 0

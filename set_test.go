@@ -16,6 +16,7 @@ package Set3
 
 import (
 	"math/rand"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -427,4 +428,105 @@ func TestEquals(t *testing.T) {
 	if set3.Equals(set6) {
 		t.Errorf("Test case 6: Sets with different elements: Expected false, got true")
 	}
+}
+
+func TestAsSet3(t *testing.T) {
+	empty := NewSet3[int]()
+	s1 := AsSet3([]int{})
+	eq := empty.Equals(s1)
+	assert.Equal(t, eq, true)
+	s1.Add(1)
+	s2 := AsSet3([]int{1})
+	eq = s1.Equals(s2)
+	assert.Equal(t, eq, true)
+	s1.Add(2)
+	s3 := AsSet3([]int{2, 1})
+	eq = s1.Equals(s3)
+	assert.Equal(t, eq, true)
+}
+
+func TestSet3GroupString(t *testing.T) {
+	tests := []struct {
+		name  string
+		group set3Group[int]
+		want  string
+	}{
+		{
+			name:  "Empty slots",
+			group: set3Group[int]{ctrl: set3AllEmpty, slot: [set3groupSize]int{0, 0, 0, 0, 0, 0, 0, 0}},
+			want:  "[__|__|__|__|__|__|__|__]{0|0|0|0|0|0|0|0}",
+		},
+		{
+			name:  "Deleted slots",
+			group: set3Group[int]{ctrl: set3AllDeleted, slot: [set3groupSize]int{0, 0, 0, 0, 0, 0, 0, 0}},
+			want:  "[XX|XX|XX|XX|XX|XX|XX|XX]{0|0|0|0|0|0|0|0}",
+		},
+		{
+			name:  "Mixed slots",
+			group: set3Group[int]{ctrl: 0x71727374757680FE, slot: [set3groupSize]int{1, 2, 3, 4, 5, 6, 7, 8}},
+			want:  "[XX|__|76|75|74|73|72|71]{1|2|3|4|5|6|7|8}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.group.String(); got != tt.want {
+				t.Errorf("set3Group.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSet3String(t *testing.T) {
+	tests := []struct {
+		name string
+		set  Set3[int]
+		want string
+	}{
+		{
+			name: "Empty set",
+			set:  *NewSet3[int](),
+			want: "^\\{\\}$",
+		},
+		{
+			name: "Single element",
+			set:  *AsSet3([]int{1}),
+			want: "^\\{1\\}$",
+		},
+		{
+			name: "Multiple elements",
+			set:  *AsSet3([]int{1, 2, 3}),
+			want: "^\\{[1-3],[1-3],[1-3]\\}$",
+		},
+		{
+			name: "Multiple groups",
+			set:  *AsSet3([]int{1, 2, 3, 4, 5, 6, 7, 8, 9}),
+			want: "^\\{[1-9],[1-9],[1-9],[1-9],[1-9],[1-9],[1-9],[1-9],[1-9]\\}$",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.set.String()
+			pattern := tt.want
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				t.Errorf("Error compiling regex %v: %v", pattern, err)
+			}
+			match := re.MatchString(got)
+			if !match {
+				t.Errorf("Set3.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSet3Clone(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3})
+	set2 := set1.Clone()
+	assert.False(t, set1 == set2, "set2 shall not be identical with set1")
+	assert.True(t, set1.Equals(set2), "set2 shall be equal to set1")
+	set1.Add(4)
+	set2.Add(5)
+	assert.False(t, set1.Equals(set2), "set2 shall not be equal to set1 anymore")
 }
