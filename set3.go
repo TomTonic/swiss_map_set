@@ -107,7 +107,7 @@ type Set3[T comparable] struct {
 
 // Returns a string representation of the elements of this Set3 in Roster notation (https://en.wikipedia.org/wiki/Set_(mathematics)#Roster_notation).
 // The order of the elements in the result is arbitrarily.
-func (this Set3[T]) String() string {
+func (this *Set3[T]) String() string {
 	var builder strings.Builder
 	builder.WriteString("{")
 	total := this.Count()
@@ -486,16 +486,16 @@ func (this *Set3[T]) Difference(that *Set3[T]) *Set3[T] {
 }
 
 // Clear removes all elements from the Set3.
-func (Set3 *Set3[T]) Clear() {
+func (this *Set3[T]) Clear() {
 	var k T
-	for grpidx := range len(Set3.group) {
-		d := &(Set3.group[grpidx])
+	for grpidx := range len(this.group) {
+		d := &(this.group[grpidx])
 		d.ctrl = set3AllEmpty
 		for j := range set3groupSize {
 			d.slot[j] = k
 		}
 	}
-	Set3.resident, Set3.dead = 0, 0
+	this.resident, this.dead = 0, 0
 }
 
 // Creates a new Set3 as a mathematical intersection between this and that. The result is a new Set3 that contains elements that are in both sets.
