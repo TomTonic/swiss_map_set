@@ -11,6 +11,34 @@ The code is derived from [SwissMap](https://github.com/dolthub/swiss) and it imp
 
 The name "Set3" comes from the fact that this was the 3rd attempt for an optimized datastructure/code-layout to get the best runtime performance.
 
+## Usage
+
+The following test case creates two sets and demonstrates some operations. For a full list of operations on the Set3 type, see [API doc](https://pkg.go.dev/github.com/TomTonic/Set3#Set3).
+
+```go
+func TestExample(t *testing.T) {
+	// create a new Set3
+	set1 := NewSet3[int]()
+	// add some elements
+	set1.Add(1)
+	set1.Add(2)
+	set1.Add(3)
+	// add some more elements from an array
+	set1.AddAllFrom([]int{4, 5, 6})
+	// create a second set directly from an array
+	set2 := AsSet3([]int{2, 3, 4, 5})
+	// check if set2 is a subset of set1. must be true in this case
+	isSubset := set1.ContainsAll(set2)
+	assert.True(t, isSubset, "%v is not a subset of %v", set2, set1)
+	// mathematical operations like Union, Difference and Intersect
+	// do not manipulate a Set3 but return a new set
+	intersect := set1.Intersection(set2)
+	// compare sets. as set2 is a subset of set1, intersect must be equal to set2
+	equal := intersect.Equals(set2)
+	assert.True(t, equal, "%v is not equal to %v", intersect, set2)
+}
+```
+
 ## Performance
 
 The following benchmarks have been performed with [v0.2.0](https://github.com/TomTonic/Set3/releases/tag/v0.2.0) to compare `Set3[uint32]` with `map[uint32]struct{}` with the command:
