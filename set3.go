@@ -96,7 +96,7 @@ func (this set3Group[T]) String() string {
 	return builder.String()
 }
 
-// Set3 is a set if type K
+// Set3 is a set of type K
 type Set3[T comparable] struct {
 	hashFunction maphash.Hasher[T]
 	resident     uint32
@@ -105,7 +105,7 @@ type Set3[T comparable] struct {
 	group        []set3Group[T]
 }
 
-// String returns a string representation of the elements of this set in Roster notation (https://en.wikipedia.org/wiki/Set_(mathematics)#Roster_notation).
+// Returns a string representation of the elements of this Set3 in Roster notation (https://en.wikipedia.org/wiki/Set_(mathematics)#Roster_notation).
 // The order of the elements in the result is arbitrarily.
 func (this Set3[T]) String() string {
 	var builder strings.Builder
@@ -164,7 +164,7 @@ func AsSet3[T comparable](data []T) *Set3[T] {
 	return result
 }
 
-// Clone creates an exact clone of this Set3. Cloning is rather cheap in comparison with creating a new set and adding all nodes from this set, as the backing data structures are just copied.
+// Clone creates an exact clone of this Set3. Cloning is rather cheap in comparison with creating a new set and adding all elements from this set, as the backing data structures are just copied.
 // You can manipulate both clones independently.
 func (this *Set3[T]) Clone() *Set3[T] {
 	result := &Set3[T]{
@@ -183,7 +183,7 @@ func (this *Set3[T]) fullCopyGroups() []set3Group[T] {
 	return result
 }
 
-// Contains returns true if the element is present in the Set3.
+// Contains returns true if the element is present in this Set3.
 func (this *Set3[T]) Contains(element T) bool {
 	hash := this.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
@@ -219,6 +219,7 @@ func (this *Set3[T]) Contains(element T) bool {
 	}
 }
 
+// Returns true if this Set3 contains all elements from that Set3.
 func (this *Set3[T]) ContainsAll(that *Set3[T]) bool {
 	if this == that {
 		return true
@@ -234,6 +235,7 @@ func (this *Set3[T]) ContainsAll(that *Set3[T]) bool {
 	return true
 }
 
+// Returns true if this Set3 contains all elements from the given data array.
 func (this *Set3[T]) ContainsAllFrom(data []T) bool {
 	for _, e := range data {
 		if !this.Contains(e) {
@@ -243,6 +245,7 @@ func (this *Set3[T]) ContainsAllFrom(data []T) bool {
 	return true
 }
 
+// Returns true if this Set3 and that Set3 have the same size and contain the same elements.
 func (this *Set3[T]) Equals(that *Set3[T]) bool {
 	if this == that {
 		return true
@@ -258,9 +261,9 @@ func (this *Set3[T]) Equals(that *Set3[T]) bool {
 	return true
 }
 
-// Iterates over all elements in this |Set3|.
-// Caution: If the |Set3| is changed during the iteration, the result may be arbitrary.
-// If the |Set3| might get changed during the itration, you might prefer ImmutableRange()
+// Iterates over all elements in this Set3.
+// Caution: If this Set3 is changed during the iteration, the result is unpredictable.
+// So if you want to add or remove elements to or from this Set3 during the itration, choose ImmutableRange()
 func (this *Set3[T]) MutableRange() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for _, group := range this.group {
@@ -279,7 +282,7 @@ func (this *Set3[T]) MutableRange() iter.Seq[T] {
 	}
 }
 
-// Iterates over all elements in this |Set3|. Makes an internal copy of the stored elements first.
+// Iterates over all elements in this Set3. Makes an internal copy of the stored elements first.
 // To avoid this copy, choose MutableRange()
 func (this *Set3[T]) ImmutableRange() iter.Seq[T] {
 	return func(yield func(T) bool) {
@@ -311,7 +314,7 @@ func (this *Set3[T]) ToArray() []T {
 	return result
 }
 
-// Add attempts to insert |element|
+// Inserts the element into this Set3 if it is not yet in this Set3.
 func (this *Set3[T]) Add(element T) {
 	if this.resident >= this.elementLimit {
 		this.rehashToNumGroups(this.nextSize())
@@ -355,21 +358,21 @@ func (this *Set3[T]) Add(element T) {
 	}
 }
 
-// Attempts to insert all elements from |that| into |this| Set3.
+// Inserts all elements from that Set3 that are not yet in this Set3 into this Set3.
 func (this *Set3[T]) AddAll(that *Set3[T]) {
 	for e := range that.MutableRange() {
 		this.Add(e)
 	}
 }
 
-// Attempts to insert all elements from |that| into |this| Set3.
+// Inserts all elements from the given data array that are not yet in this Set3 into this Set3.
 func (this *Set3[T]) AddAllFrom(data []T) {
 	for _, e := range data {
 		this.Add(e)
 	}
 }
 
-// Creates a new Set3 as a mathematical union of the elements from |this| and |that|.
+// Creates a new Set3 as a mathematical union of the elements from this Set3 and that Set3.
 func (this *Set3[T]) Union(that *Set3[T]) *Set3[T] {
 	potentialSize := this.Count() + that.Count()
 	result := NewSet3WithSize[T](potentialSize)
@@ -397,7 +400,7 @@ func isAnElementAt(ctrl uint64, pos int) bool {
 	return ctrl == 0
 }
 
-// Remove attempts to remove |element|, returns true if the |element| was in the |Set3|
+// Removes the given element from this Set3 if it is in this Set3, returns whether or not the element was in this Set3.
 func (this *Set3[T]) Remove(element T) bool {
 	hash := this.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
@@ -456,21 +459,21 @@ func (this *Set3[T]) Remove(element T) bool {
 	}
 }
 
-// Attempts to insert all elements from |that| into |this| Set3.
+// Removes all elements from this Set3 that are in that Set3.
 func (this *Set3[T]) RemoveAll(that *Set3[T]) {
 	for e := range that.MutableRange() {
 		this.Remove(e)
 	}
 }
 
-// Attempts to insert all elements from |that| into |this| Set3.
+// Removes all elements from this Set3 that are in the data array.
 func (this *Set3[T]) RemoveAllFrom(data []T) {
 	for _, e := range data {
 		this.Remove(e)
 	}
 }
 
-// Creates a new Set3 as a mathematical difference between |this| and |that|; i.e. the result contains nodes that are in |this| but not in |that|.
+// Creates a new Set3 as a mathematical difference between this and that. The result is a new Set3 that contains elements that are in this but not in that.
 func (this *Set3[T]) Difference(that *Set3[T]) *Set3[T] {
 	potentialSize := this.Count()
 	result := NewSet3WithSize[T](potentialSize)
@@ -495,7 +498,7 @@ func (Set3 *Set3[T]) Clear() {
 	Set3.resident, Set3.dead = 0, 0
 }
 
-// Creates a new Set3 as a mathematical intersection between |this| and |that|; i.e. the result contains nodes that are in |this| and in |that|.
+// Creates a new Set3 as a mathematical intersection between this and that. The result is a new Set3 that contains elements that are in both sets.
 func (this *Set3[T]) Intersection(that *Set3[T]) *Set3[T] {
 	var smallerSet *Set3[T]
 	var biggerSet *Set3[T]
@@ -518,7 +521,7 @@ func (this *Set3[T]) Intersection(that *Set3[T]) *Set3[T] {
 	return result
 }
 
-// Count returns the number of elements in the Map.
+// Count returns the number of elements in the Set3.
 func (this *Set3[T]) Count() uint32 {
 	return this.resident - this.dead
 }
