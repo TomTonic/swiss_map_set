@@ -153,7 +153,7 @@ func calcReqNrOfGroups(size uint32) int {
 }
 
 // AsSet3 is a convenience constructor to directly create a Set3 from given values. It creates a Set3 with the required capacity and adds all (unique) elements to this Set3.
-// If the array contains duplicates, the duplicates will be omited. Use it like:
+// If the array contains duplicates, the duplicates will be omitted. Use it like:
 //
 //	myset := AsSet3([]int{1, 2, 3, 4})
 func AsSet3[T comparable](data []T) *Set3[T] {
