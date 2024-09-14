@@ -3,9 +3,7 @@ package Set3
 import (
 	"fmt"
 	"math/rand"
-	"os"
 	"runtime"
-	"runtime/pprof"
 	"testing"
 	"time"
 )
@@ -440,20 +438,6 @@ func BenchmarkNativeMapFind(b *testing.B) {
 		})
 		//println(x)
 	}
-}
-
-func main() {
-	f, _ := os.Create("cpu.prof")
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
-	/*
-		resultSet, resultMap, searchElements := prepareDataUint32(10, 20, 30, 0.3)
-		println("Set: %v", resultSet)
-		println("Map: %v", resultMap)
-		println("Search: %v", searchElements)
-
-		Algorithm1(resultSet, resultMap, searchElements) // oder Algorithm2()
-	*/
 }
 
 func myGenStringData(size, count int) (result []string) {

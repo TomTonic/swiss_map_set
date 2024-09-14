@@ -300,6 +300,17 @@ func (this *Set3[T]) ImmutableRange() iter.Seq[T] {
 	}
 }
 
+// ToArray allocates an array of type T and adds all elements of this Set3 to it. The order of the elements in the array is arbitrary.
+func (this *Set3[T]) ToArray() []T {
+	result := make([]T, this.Count())
+	i := 0
+	for e := range this.MutableRange() {
+		result[i] = e
+		i++
+	}
+	return result
+}
+
 // Add attempts to insert |element|
 func (this *Set3[T]) Add(element T) {
 	if this.resident >= this.elementLimit {

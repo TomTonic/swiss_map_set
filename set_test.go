@@ -687,3 +687,14 @@ func TestRehash(t *testing.T) {
 		assert.True(t, set.Contains(e), "set shall contain %v", e)
 	}
 }
+
+func TestToArray(t *testing.T) {
+	set := AsSet3([]int{1, 2, 2, 3})
+	ary := set.ToArray()
+	assert.True(t, len(ary) == 3, "the array shall contain 3 elements")
+	new_set := AsSet3(ary)
+	assert.True(t, set.Equals(new_set), "both sets shall contain the same 3 elements")
+	empty := NewSet3[int]()
+	ary = empty.ToArray()
+	assert.True(t, len(ary) == 0, "the array shall contain 0 elements")
+}
