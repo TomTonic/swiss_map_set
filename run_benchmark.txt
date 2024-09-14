@@ -1,1 +1,2 @@
-go test -benchmem -benchtime=4s -timeout 120m -run="^$" -bench "^(BenchmarkSet3Find|BenchmarkNativeMapFind)$" github.com/TomTonic/Set3
+go test -benchmem -benchtime=6s -timeout 480m -run="^$" -bench "^(BenchmarkSet3Fill|BenchmarkNativeMapFill|BenchmarkSet3Find|BenchmarkNativeMapFind)$" github.co
+m/TomTonic/Set3 > benchresult.txt
