@@ -57,7 +57,7 @@ func BenchmarkInt64Sets(b *testing.B) {
 }
 
 func TestMemoryFootprintSet(t *testing.T) {
-	//t.Skip("unskip for memory footprint stats - runs 1-2 minutes")
+	t.Skip("unskip for memory footprint stats - runs 1-2 minutes")
 	var samples []float64
 	for n := 10; n <= 350_000; n += 20 {
 		b1 := testing.Benchmark(func(b *testing.B) {

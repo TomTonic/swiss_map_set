@@ -88,7 +88,6 @@ var config = []struct {
 	{inintialSetSize: 21, finalSetSize: 38, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
 	{inintialSetSize: 21, finalSetSize: 39, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
 	{inintialSetSize: 21, finalSetSize: 40, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-
 	{inintialSetSize: 21, finalSetSize: 41, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
 	{inintialSetSize: 21, finalSetSize: 42, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
 	{inintialSetSize: 21, finalSetSize: 43, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
