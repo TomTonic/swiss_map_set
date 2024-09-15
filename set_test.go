@@ -55,16 +55,6 @@ func TestSet3(t *testing.T) {
 	t.Run("uint32=100_000", func(t *testing.T) {
 		testSet3(t, genUint32Data(100_000))
 	})
-	/*
-		t.Run("string capacity", func(t *testing.T) {
-			testSet3Capacity(t, func(n int) []string {
-				return genStringData(16, n)
-			})
-		})
-		t.Run("uint32 capacity", func(t *testing.T) {
-			testSet3Capacity(t, genUint32Data)
-		})
-	*/
 }
 
 func testSet3[K comparable](t *testing.T, keys []K) {
@@ -191,7 +181,7 @@ func testSetClear[K comparable](t *testing.T, keys []K) {
 		assert.False(t, ok)
 	}
 	var calls int
-	for _ = range m.ImmutableRange() {
+	for range m.ImmutableRange() {
 		calls++
 	}
 	assert.Equal(t, 0, calls)
@@ -235,33 +225,6 @@ func testSetGrow[K comparable](t *testing.T, keys []K) {
 	}
 }
 
-/*
-	func testSet3Capacity[K comparable](t *testing.T, gen func(n int) []K) {
-		// Capacity() behavior depends on |groupSize|
-		// which varies by processor architecture.
-		caps := []uint32{
-			uint32(1.0 * set3maxAvgGroupLoad),
-			uint32(2.0 * set3maxAvgGroupLoad),
-			uint32(3.0 * set3maxAvgGroupLoad),
-			uint32(4.0 * set3maxAvgGroupLoad),
-			uint32(5.0 * set3maxAvgGroupLoad),
-			uint32(10.0 * set3maxAvgGroupLoad),
-			uint32(25.0 * set3maxAvgGroupLoad),
-			uint32(50.0 * set3maxAvgGroupLoad),
-			uint32(100.0 * set3maxAvgGroupLoad),
-		}
-		for _, c := range caps {
-			m := NewSet3[K](c)
-			assert.Equal(t, int(c), m.Capacity())
-			keys := gen(rand.Intn(int(c)))
-			for _, k := range keys {
-				m.Add(k)
-			}
-			assert.Equal(t, int(c)-len(keys), m.Capacity())
-			assert.Equal(t, int(c), m.Count()+m.Capacity())
-		}
-	}
-*/
 func TestMutableRange(t *testing.T) {
 	tests := []struct {
 		name     string
