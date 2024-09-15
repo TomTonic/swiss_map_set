@@ -720,3 +720,47 @@ func TestExample(t *testing.T) {
 	equal := intersect.Equals(set2)
 	assert.True(t, equal, "%v is not equal to %v", intersect, set2)
 }
+
+func TestNil(t *testing.T) {
+	empty := NewSet3[int]()
+
+	set := AsSet3[int](nil)
+	assert.True(t, empty.Equals(set), "%v is not equal to %v", set, empty)
+
+	set.AddAllFrom([]int{1, 2, 3})
+	ref := set.Clone()
+
+	b := set.ContainsAll(nil)
+	assert.True(t, b, "every set shall contain the empty set")
+
+	c := set.ContainsAllFrom(nil)
+	assert.True(t, c, "every set shall contain the empty set")
+
+	d := empty.Equals(nil)
+	assert.True(t, d, "an empty set shall be equal to nil")
+
+	d2 := set.Equals(nil)
+	assert.False(t, d2, "a non-empty set shall not be equal to nil")
+
+	set.AddAll(nil)
+	assert.True(t, set.Equals(ref), "%v is not equal to %v", set, ref)
+
+	set.AddAllFrom(nil)
+	assert.True(t, set.Equals(ref), "%v is not equal to %v", set, ref)
+
+	u := set.Union(nil)
+	assert.True(t, u.Equals(set), "%v is not equal to %v", u, set)
+
+	set.RemoveAll(nil)
+	assert.True(t, set.Equals(ref), "%v is not equal to %v", set, ref)
+
+	set.RemoveAllFrom(nil)
+	assert.True(t, set.Equals(ref), "%v is not equal to %v", set, ref)
+
+	diff := set.Difference(nil)
+	assert.True(t, diff.Equals(set), "%v is not equal to %v", diff, set)
+
+	intersect := set.Intersection(nil)
+	assert.True(t, intersect.Equals(empty), "%v is not equal to %v", intersect, empty)
+
+}
