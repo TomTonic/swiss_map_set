@@ -315,7 +315,7 @@ func (this *Set3[T]) ContainsAll(that *Set3[T]) bool {
 /*
 Returns true if this Set3 contains all elements from the given data array.
 
-If the lenght of data is zero, ContainsAllFrom returns true. If data is nil, ContainsAllFrom returns true.
+If the length of data is zero, ContainsAllFrom returns true. If data is nil, ContainsAllFrom returns true.
 
 Example:
 
