@@ -62,7 +62,7 @@ type set3Group[T comparable] struct {
 
 var set3hextable = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}
 
-func (this set3Group[T]) String() string {
+func (this *set3Group[T]) String() string {
 	var builder strings.Builder
 	var mask uint64 = 0xFF
 	shr := 0
@@ -800,6 +800,46 @@ func (this *Set3[T]) Intersection(that *Set3[T]) *Set3[T] {
 		}
 	}
 	return result
+}
+
+/*
+Checks if this Set3 contains any element that is also present in that Set3. This function also provides a quick way to check if two Set3 are disjoint (i.e. !ContainsAny).
+
+Returns false if that Set3 is nil.
+
+Example:
+
+	set1 := NewSet3[int]()
+	set1.Add(1)
+	set1.Add(2)
+	set1.Add(3)
+	set2 := NewSet3[int]()
+	set2.Add(0)
+	set2.Add(1)
+	b := set1.ContainsAny(set2) // b will be true
+*/
+func (this *Set3[T]) ContainsAny(that *Set3[T]) bool {
+	if that == nil {
+		return false
+	}
+
+	var smallerSet *Set3[T]
+	var biggerSet *Set3[T]
+
+	if this.Count() < that.Count() {
+		smallerSet = this
+		biggerSet = that
+	} else {
+		smallerSet = that
+		biggerSet = this
+	}
+
+	for e := range smallerSet.ImmutableRange() {
+		if biggerSet.Contains(e) {
+			return true
+		}
+	}
+	return false
 }
 
 /*

@@ -745,4 +745,56 @@ func TestNil(t *testing.T) {
 	intersect := set.Intersection(nil)
 	assert.True(t, intersect.Equals(empty), "%v is not equal to %v", intersect, empty)
 
+	bany := set.ContainsAny(nil)
+	assert.False(t, bany, "set cannot contain any elements from nil")
+
+}
+
+func TestContainsAny(t *testing.T) {
+	tests := []struct {
+		name     string
+		thisSet  *Set3[int]
+		thatSet  *Set3[int]
+		expected bool
+	}{
+		{
+			name:     "No common elements",
+			thisSet:  AsSet3[int]([]int{1, 2, 3}),
+			thatSet:  AsSet3[int]([]int{4, 5, 6}),
+			expected: false,
+		},
+		{
+			name:     "Some common elements (this bigger)",
+			thisSet:  AsSet3[int]([]int{1, 2, 3, 4}),
+			thatSet:  AsSet3[int]([]int{3, 4, 5}),
+			expected: true,
+		},
+		{
+			name:     "Some common elements (that bigger)",
+			thisSet:  AsSet3[int]([]int{1, 2, 3}),
+			thatSet:  AsSet3[int]([]int{3, 4, 5, 6}),
+			expected: true,
+		},
+		{
+			name:     "All elements common",
+			thisSet:  AsSet3[int]([]int{1, 2, 3}),
+			thatSet:  AsSet3[int]([]int{1, 2, 3}),
+			expected: true,
+		},
+		{
+			name:     "Empty sets",
+			thisSet:  AsSet3[int]([]int{}),
+			thatSet:  AsSet3[int]([]int{}),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.thisSet.ContainsAny(tt.thatSet)
+			if result != tt.expected {
+				t.Errorf("ContainsAny() = %v, expected %v", result, tt.expected)
+			}
+		})
+	}
 }
