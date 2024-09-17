@@ -289,6 +289,25 @@ func TestMutableRange(t *testing.T) {
 	}
 }
 
+func TestMutableRangeTwice(t *testing.T) {
+	set := AsSet3[string]([]string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"})
+	strary := make([]string, set.Count())
+
+	idx := 0
+	for s := range set.MutableRange() {
+		strary[idx] = s
+		idx++
+	}
+
+	idx = 0
+	for s := range set.MutableRange() {
+		// the order is arbitrary, but the same if set is not altered
+		assert.True(t, strary[idx] == s, strary[idx]+"!="+s)
+		idx++
+	}
+
+}
+
 func TestImmutableRange(t *testing.T) {
 	tests := []struct {
 		name     string
