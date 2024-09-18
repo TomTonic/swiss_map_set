@@ -774,6 +774,9 @@ func TestNil(t *testing.T) {
 	banyfrom := set.ContainsAnyFrom(nil)
 	assert.False(t, banyfrom, "set cannot contain any elements from nil")
 
+	var nilSet *Set3[int]
+	s := nilSet.String()
+	assert.True(t, s == "{nil}", "value shall be '{nil}'")
 }
 
 func TestContainsAny(t *testing.T) {

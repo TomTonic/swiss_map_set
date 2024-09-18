@@ -118,6 +118,9 @@ Example:
 	fmt.Println(set) // will print "{2,3,1}" with the numbers in arbitrary order
 */
 func (this *Set3[T]) String() string {
+	if this == nil {
+		return "{nil}"
+	}
 	var builder strings.Builder
 	builder.WriteString("{")
 	total := this.Count()
