@@ -843,6 +843,34 @@ func (this *Set3[T]) ContainsAny(that *Set3[T]) bool {
 }
 
 /*
+Checks if this Set3 contains any element fromthe given data array.
+
+Returns false if data is nil.
+
+Example:
+
+	set1 := NewSet3[int]()
+	set1.Add(1)
+	set1.Add(2)
+	set1.Add(3)
+	set2 := NewSet3[int]()
+	set2.Add(0)
+	set2.Add(1)
+	b := set1.ContainsAny(set2) // b will be true
+*/
+func (this *Set3[T]) ContainsAnyFrom(data []T) bool {
+	if data == nil {
+		return false
+	}
+	for _, d := range data {
+		if this.Contains(d) {
+			return true
+		}
+	}
+	return false
+}
+
+/*
 Count returns the number of elements in this Set3.
 
 Example:

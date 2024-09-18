@@ -748,6 +748,9 @@ func TestNil(t *testing.T) {
 	bany := set.ContainsAny(nil)
 	assert.False(t, bany, "set cannot contain any elements from nil")
 
+	banyfrom := set.ContainsAnyFrom(nil)
+	assert.False(t, banyfrom, "set cannot contain any elements from nil")
+
 }
 
 func TestContainsAny(t *testing.T) {
@@ -794,6 +797,49 @@ func TestContainsAny(t *testing.T) {
 			result := tt.thisSet.ContainsAny(tt.thatSet)
 			if result != tt.expected {
 				t.Errorf("ContainsAny() = %v, expected %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestContainsAnyFrom(t *testing.T) {
+	tests := []struct {
+		name     string
+		set      *Set3[int]
+		array    []int
+		expected bool
+	}{
+		{
+			name:     "No common elements",
+			set:      AsSet3[int]([]int{1, 2, 3}),
+			array:    []int{4, 5, 6},
+			expected: false,
+		},
+		{
+			name:     "Some common elements",
+			set:      AsSet3[int]([]int{1, 2, 3, 4}),
+			array:    []int{0, 3, 4, 5},
+			expected: true,
+		},
+		{
+			name:     "All elements common",
+			set:      AsSet3[int]([]int{1, 2, 3}),
+			array:    []int{1, 2, 3},
+			expected: true,
+		},
+		{
+			name:     "Empty sets",
+			set:      AsSet3[int]([]int{}),
+			array:    []int{},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.set.ContainsAnyFrom(tt.array)
+			if result != tt.expected {
+				t.Errorf("ContainsAnyFrom() = %v, expected %v", result, tt.expected)
 			}
 		})
 	}
