@@ -803,6 +803,41 @@ func (this *Set3[T]) Intersection(that *Set3[T]) *Set3[T] {
 }
 
 /*
+Creates a new Set3 as a mathematical intersection between this Set3 and the elements of the data array. The result is a new Set3.
+
+If data is nil, IntersectionFrom returns an empty Set3.
+
+Example:
+
+	set := NewSet3[int]()
+	set.Add(1)
+	set.Add(2)
+	set.Add(3)
+	intersect := set.IntersectionFrom([]int{3,4}]) // set1 and set2 are not altered, intersect will contain 3
+*/
+func (this *Set3[T]) IntersectionFrom(data []T) *Set3[T] {
+	if data == nil {
+		return NewSet3[T]()
+	}
+
+	var potentialSize uint32
+
+	if this.Count() < uint32(len(data)) {
+		potentialSize = this.Count()
+	} else {
+		potentialSize = uint32(len(data))
+	}
+
+	result := NewSet3WithSize[T](potentialSize)
+	for _, e := range data {
+		if this.Contains(e) {
+			result.Add(e)
+		}
+	}
+	return result
+}
+
+/*
 Checks if this Set3 contains any element that is also present in that Set3. This function also provides a quick way to check if two Set3 are disjoint (i.e. !ContainsAny).
 
 Returns false if that Set3 is nil.
@@ -849,14 +884,11 @@ Returns false if data is nil.
 
 Example:
 
-	set1 := NewSet3[int]()
-	set1.Add(1)
-	set1.Add(2)
-	set1.Add(3)
-	set2 := NewSet3[int]()
-	set2.Add(0)
-	set2.Add(1)
-	b := set1.ContainsAny(set2) // b will be true
+	set := NewSet3[int]()
+	set.Add(1)
+	set.Add(2)
+	set.Add(3)
+	b := set1.ContainsAnyFrom([]int{4, 5, 6}) // b will be false
 */
 func (this *Set3[T]) ContainsAnyFrom(data []T) bool {
 	if data == nil {

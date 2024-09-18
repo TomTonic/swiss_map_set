@@ -594,10 +594,11 @@ func TestSet3AddAllFrom(t *testing.T) {
 
 func TestSet3Intersection(t *testing.T) {
 	set1 := AsSet3([]int{1, 2, 3, 4})
+	clone := set1.Clone()
 	set2 := AsSet3([]int{3, 4, 5, 6})
 	set3 := AsSet3([]int{3, 4})
 	i1 := set1.Intersection(set2)
-	assert.False(t, set1.Equals(i1), "set1 shall not be altered by intersection")
+	assert.True(t, set1.Equals(clone), "set1 shall not be altered by intersection")
 	assert.True(t, i1.Equals(set3), "i1 and set3 shall be equal")
 
 	empty := NewSet3[int]()
@@ -609,6 +610,25 @@ func TestSet3Intersection(t *testing.T) {
 	set4 := AsSet3([]int{1, 2, 3})
 	set5 := AsSet3([]int{4, 5, 6})
 	i4 := set4.Intersection(set5)
+	assert.True(t, empty.Equals(i4), "empty shall be equal to i4")
+}
+
+func TestSet3IntersectionFrom(t *testing.T) {
+	set1 := AsSet3([]int{1, 2, 3, 4})
+	clone := set1.Clone()
+	set3 := AsSet3([]int{3, 4})
+	i1 := set1.IntersectionFrom([]int{3, 4, 5, 6})
+	assert.True(t, set1.Equals(clone), "set1 shall not be altered by intersection")
+	assert.True(t, i1.Equals(set3), "i1 and set3 shall be equal")
+
+	empty := NewSet3[int]()
+	i2 := set1.IntersectionFrom([]int{})
+	assert.True(t, empty.Equals(i2), "empty shall be equal to i2")
+	i3 := empty.IntersectionFrom([]int{3, 4, 5, 6})
+	assert.True(t, empty.Equals(i3), "empty shall be equal to i3")
+
+	set4 := AsSet3([]int{1, 2, 3})
+	i4 := set4.IntersectionFrom([]int{4, 5, 6})
 	assert.True(t, empty.Equals(i4), "empty shall be equal to i4")
 }
 
