@@ -765,6 +765,9 @@ func TestNil(t *testing.T) {
 	intersect := set.Intersection(nil)
 	assert.True(t, intersect.Equals(empty), "%v is not equal to %v", intersect, empty)
 
+	intersectFrom := set.IntersectionFrom(nil)
+	assert.True(t, intersectFrom.Equals(empty), "%v is not equal to %v", intersect, empty)
+
 	bany := set.ContainsAny(nil)
 	assert.False(t, bany, "set cannot contain any elements from nil")
 
