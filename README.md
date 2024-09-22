@@ -13,9 +13,27 @@ The code is derived from [SwissMap](https://github.com/dolthub/swiss) and it imp
 
 The name "Set3" comes from the fact that this was the 3rd attempt for an optimized datastructure/code-layout to get the best runtime performance.
 
-## Usage
+## Installation
 
-The following test case creates two sets and demonstrates some operations. For a full list of operations on the Set3 type, see [API doc](https://pkg.go.dev/github.com/TomTonic/Set3#Set3).
+To use the `Set3` package in your Go project, follow these steps:
+
+1. **Initialize a Go module** (if you haven't already):
+   ```sh
+   go mod init your-module-name
+   ```
+2. **Add the package**: Simply import the package in your Go code, and Go modules will handle the rest:
+   ```go
+   import "github.com/TomTonic/Set3"
+   ```
+3. **Download dependencies**: Run the following command to download the dependencies:
+   ```sh
+   go mod tidy
+   ```
+   This will automatically download and install the Set3 package along with any other dependencies.
+
+## Using Set3
+
+The following test case creates two sets and demonstrates some operations. For a full list of operations on the `Set3` type, see [API doc](https://pkg.go.dev/github.com/TomTonic/Set3#Set3).
 
 ```go
 func TestExample(t *testing.T) {
