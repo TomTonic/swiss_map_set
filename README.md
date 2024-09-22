@@ -5,6 +5,7 @@
 [![Tests](https://github.com/TomTonic/Set3/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/TomTonic/Set3/actions/workflows/coverage.yml)
 ![coverage](https://raw.githubusercontent.com/TomTonic/Set3/badges/.badges/main/coverage.svg)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9470/badge)](https://www.bestpractices.dev/projects/9470)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TomTonic/Set3/badge)](https://scorecard.dev/viewer/?uri=github.com/TomTonic/Set3)
 
 Set3 is a fast and pure set implmentation in and for Golang. I wrote it as an alternative to set implementations based on `map[type]struct{}`. Set3 is 10%-20% faster and uses 40% less memory than `map[type]struct{}`. As hash function, Set3 uses the built-in hash function of Golang via [dolthub/maphash](https://github.com/dolthub/maphash).
 
@@ -12,9 +13,27 @@ The code is derived from [SwissMap](https://github.com/dolthub/swiss) and it imp
 
 The name "Set3" comes from the fact that this was the 3rd attempt for an optimized datastructure/code-layout to get the best runtime performance.
 
-## Usage
+## Installation
 
-The following test case creates two sets and demonstrates some operations. For a full list of operations on the Set3 type, see [API doc](https://pkg.go.dev/github.com/TomTonic/Set3#Set3).
+To use the `Set3` package in your Go project, follow these steps:
+
+1. **Initialize a Go module** (if you haven't already):
+   ```sh
+   go mod init your-module-name
+   ```
+2. **Add the package**: Simply import the package in your Go code, and Go modules will handle the rest:
+   ```go
+   import "github.com/TomTonic/Set3"
+   ```
+3. **Download dependencies**: Run the following command to download the dependencies:
+   ```sh
+   go mod tidy
+   ```
+   This will automatically download and install the Set3 package along with any other dependencies.
+
+## Using Set3
+
+The following test case creates two sets and demonstrates some operations. For a full list of operations on the `Set3` type, see [API doc](https://pkg.go.dev/github.com/TomTonic/Set3#Set3).
 
 ```go
 func TestExample(t *testing.T) {
