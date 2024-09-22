@@ -438,7 +438,7 @@ func BenchmarkNativeMapFind(b *testing.B) {
 		//println(x)
 	}
 }
-
+/*
 func myGenStringData(size, count int) (result []string) {
 	src := rand.New(rand.NewSource(int64(size * count)))
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -469,3 +469,4 @@ func myGenerateInt64Data(n int) (data []int64) {
 	}
 	return
 }
+*/
