@@ -1,14 +1,7 @@
-# Security Policy
+# Security
 
-## Supported Versions
+If you find a significant vulnerability, or evidence of one,
+please report it privately.
 
-The following versions of Set3 are currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.4.x   | :white_check_mark: |
-| < 0.4.0 | :x:                |
-
-## Reporting a Vulnerability
-
-Use https://github.com/TomTonic/Set3/security/advisories
+We prefer that you use the [GitHub mechanism for privately reporting a vulnerability](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability#privately-reporting-a-security-vulnerability). Under the
+[main repository's security tab](https://github.com/TomTonic/Set3/security), click "Report a vulnerability" to open the advisory form.
