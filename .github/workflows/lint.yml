@@ -9,6 +9,11 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      # To report GitHub Actions status checks
+      statuses: write
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
@@ -17,6 +22,18 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          # super-linter needs the full git history to get the
+          # list of files that changed across commits
+          fetch-depth: 0
+      - name: Run Super Linter
+        uses: super-linter/super-linter/slim@v7.1.0
+        env:
+          VALIDATE_GO: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
@@ -27,11 +44,3 @@ jobs:
 #          version: v1.61.0
       - name: go mod tidy check
         uses: katexochen/go-tidy-check@427c8c07d3d83ab8d7290cad04ce71c12eab3674 # v2.0.1
-
-      - name: Run Super Linter
-        uses: super-linter/super-linter/slim@v7.1.0
-        env:
-          VALIDATE_GO: true
-          VALIDATE_MARKDOWN: true
-          VALIDATE_YAML: true
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
