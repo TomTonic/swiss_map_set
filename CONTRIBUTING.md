@@ -1,13 +1,13 @@
 # Contributing
 
-(This text was originally derived from https://github.com/coreinfrastructure/best-practices-badge/blob/main/CONTRIBUTING.md) 
+(This text is derived from https://github.com/coreinfrastructure/best-practices-badge/blob/main/CONTRIBUTING.md) 
 
 **Feedback and contributions are very welcome!**
 
 Here's help on how to make contributions, divided into the following sections:
 
 * general information,
-* [vulnerability reporting](#how_to_report_vulnerabilities),
+* vulnerability reporting,
 * documentation changes,
 * code changes,
 * how to check proposed changes before submitting them,
@@ -207,6 +207,10 @@ but please evaluate all new components before adding them
 (including whether or not you need them).
 We want to reduce our risks of depending on software that is poorly
 maintained or has vulnerabilities (intentional or unintentional).
+Furthermore, Set3 provides a consise set of functionality for a
+fundamental [abstract data type](https://en.wikipedia.org/wiki/Abstract_data_type).
+Consequently, Set3 shall not require a Go project using Set3 to pull a significant
+tree of dependencies into the project.
 
 #### License requirements for reused components
 
