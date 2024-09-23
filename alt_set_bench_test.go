@@ -408,7 +408,7 @@ func BenchmarkSet3Find(b *testing.B) {
 				}
 			}
 		})
-		//println(x)
+		// println(x)
 	}
 }
 
@@ -438,6 +438,7 @@ func BenchmarkNativeMapFind(b *testing.B) {
 		// println(x)
 	}
 }
+
 /*
 func myGenStringData(size, count int) (result []string) {
 	src := rand.New(rand.NewSource(int64(size * count)))
