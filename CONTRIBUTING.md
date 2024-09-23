@@ -11,10 +11,7 @@ Here's help on how to make contributions, divided into the following sections:
 * documentation changes,
 * code changes,
 * how to check proposed changes before submitting them,
-* reuse (supply chain for third-party components, including updating them),
-* keeping up the main branch, and
-* handling the rename of the "master" branch to "main".
-* governance
+* reuse (supply chain for third-party components, including updating them)
 
 ## General information
 
@@ -118,14 +115,6 @@ We also release the software as open source software so others can review it.
 Since early detection and impact reduction can never be perfect, we also try to
 detect and repair problems during deployment as quickly as possible.
 This is *especially* true for security issues.
-
-### No trailing whitespace
-
-Please do not use or include trailing whitespace
-(spaces or tabs at the end of a line).
-Since they are often not visible, they can cause silent problems
-and misleading unexpected changes.
-For example, some editors (e.g., Atom) quietly delete them by default.
 
 ## <span id="how_to_report_vulnerabilities">Vulnerability reporting (security issues)</a>
 
