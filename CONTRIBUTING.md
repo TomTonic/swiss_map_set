@@ -89,7 +89,7 @@ the commit:
 Signed-off-by: YOUR NAME <YOUR.EMAIL@EXAMPLE.COM>
 ````
 
-You can signoff by default in this project by creating a file
+You can sign-off by default in this project by creating a file
 (say "git-template") that contains
 some blank lines and the signed-off-by text above;
 then configure git to use that as a commit template.  For example:
@@ -207,7 +207,7 @@ but please evaluate all new components before adding them
 (including whether or not you need them).
 We want to reduce our risks of depending on software that is poorly
 maintained or has vulnerabilities (intentional or unintentional).
-Furthermore, Set3 provides a consise set of functionality for a
+Furthermore, Set3 provides a concise set of functionality for a
 fundamental [abstract data type](https://en.wikipedia.org/wiki/Abstract_data_type).
 Consequently, Set3 shall not require a Go project using Set3 to pull a significant
 tree of dependencies into the project.
