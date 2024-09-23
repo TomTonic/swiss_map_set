@@ -165,30 +165,29 @@ Follow these guidelines for writing git commit messages:
 7.  Use the body to explain what and why, not how
     (git tracks how it was changed in detail, don't repeat that).
 
-## Reuse (supply chain)
+## Reuse (Supply Chain)
 
-### Requirements for reused components
+### Requirements for Reused Components
 
-We prefer reusing components instead of writing lots of code,
-but please evaluate all new components before adding them
-(including whether or not you need them).
-We want to reduce our risks of depending on software that is poorly
-maintained or has vulnerabilities (intentional or unintentional).
-Furthermore, Set3 provides a concise set of functionality for a
+We prefer reusing components over writing extensive new code.
+However, please evaluate all new components before adding them,
+including assessing their necessity.
+This helps us minimize the risk of relying on poorly
+maintained or vulnerable software.
+Set3 provides a concise set of functionalities for a
 fundamental [abstract data type](https://en.wikipedia.org/wiki/Abstract_data_type).
-Consequently, Set3 shall not require a Go project using Set3 to pull a significant
-tree of dependencies into the project.
+Therefore, Set3 should not require a Go project using it to pull in a significant
+tree of dependencies.
 
-#### License requirements for reused components
+#### License Requirements for Reused Components
 
 All *required* reused software *must* be open source software (OSS).
 It's okay to *optionally* use proprietary software and add
 portability fixes.
 
-### Updating reused components
+### Updating Reused Components
 
-Please update only one or few components in each commit, instead of
-"everything at once".  This makes debugging problems much easier.
-In particular, if we find a problem later, we can
-use "git bisect" to easily and quickly find the cause.
-
+Please update only one or a few components per commit, rather than
+updating everything at once. This approach simplifies debugging.
+If a problem arises later, we can
+use `git bisect` to quickly identify the cause.
