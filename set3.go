@@ -111,7 +111,7 @@ The order of the elements in the result is arbitrarily.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
@@ -137,31 +137,31 @@ func (thisSet *Set3[T]) String() string {
 }
 
 /*
-NewSet3 creates a new and empty Set3 with a reasonable default initial capacity. Choose this constructor if you have no idea on how big your set will be.
+EmptySet3 creates a new and empty Set3 with a reasonable default initial capacity. Choose this constructor if you have no idea on how big your set will be.
 You can add as many elements to this set as you like, the backing data structure will automatically be reorganized to fit your needs.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
 */
-func NewSet3[T comparable]() *Set3[T] {
-	return NewSet3WithSize[T](21)
+func EmptySet3[T comparable]() *Set3[T] {
+	return EmptySet3WithCapacity[T](21)
 }
 
 /*
-NewSet3WithSize creates a new and empty Set3 with a given initial capacity. Choose this constructor if you have a pretty good idea on how big your set will be.
+EmptySet3WithCapacity creates a new and empty Set3 with a given initial capacity. Choose this constructor if you have a pretty good idea on how big your set will be.
 Nonetheless, you can add as many elements to this set as you like, the backing data structure will automatically be reorganized to fit your needs.
 
 Example:
 
-	set1 := NewSet3[int]() // you can put 1 mio. ints in set1 - rehashing will occur
-	set2 := NewSet3[int](2_000_000) // you can put 1 mio. ints in set2 - no rehashing will occur
+	set1 := EmptySet3[int]() // you can put 1 mio. ints in set1. set1 will rehash itself several times while adding them
+	set2 := EmptySet3WithCapacity[int](2_000_000) // you can put 1 mio. ints in set2. set2 does not need to rehash itself while adding them
 */
-func NewSet3WithSize[T comparable](size uint32) *Set3[T] {
-	reqNrOfGroups := calcReqNrOfGroups(size)
+func EmptySet3WithCapacity[T comparable](initialCapacity uint32) *Set3[T] {
+	reqNrOfGroups := calcReqNrOfGroups(initialCapacity)
 	result := &Set3[T]{
 		hashFunction: maphash.NewHasher[T](),
 		elementLimit: uint32(float64(reqNrOfGroups) * set3maxAvgGroupLoad),
@@ -173,8 +173,8 @@ func NewSet3WithSize[T comparable](size uint32) *Set3[T] {
 	return result
 }
 
-func calcReqNrOfGroups(size uint32) int {
-	reqNrOfGroups := int((float64(size) + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad)
+func calcReqNrOfGroups(reqCapa uint32) int {
+	reqNrOfGroups := int((float64(reqCapa) + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad)
 	if reqNrOfGroups == 0 {
 		reqNrOfGroups = 1
 	}
@@ -182,23 +182,47 @@ func calcReqNrOfGroups(size uint32) int {
 }
 
 /*
-AsSet3 is a convenience constructor to directly create a Set3 from given values. It creates a Set3 with the required capacity and adds all (unique) elements to thisSet.
+Set3FromArray is a convenience constructor to directly create a Set3 from given arguments. It creates a Set3 with the required capacity and adds all (unique) elements to this set.
+
+If the arguments contain duplicates, the duplicates are omitted. If no arguments are provided, an empty Set3 is returned.
+
+Example:
+
+	set1 := EmptySet3[int]()
+	set1.Add(1)
+	set1.Add(2)
+	set1.Add(3)
+	set2 := Set3From(1, 2, 3) // set1 and set2 are equal
+*/
+func Set3From[T comparable](args ...T) *Set3[T] {
+	if args == nil {
+		return EmptySet3[T]()
+	}
+	result := EmptySet3WithCapacity[T](uint32(len(args))) //nolint:gosec
+	for _, e := range args {
+		result.Add(e)
+	}
+	return result
+}
+
+/*
+Set3FromArray is a convenience constructor to directly create a Set3 from given values. It creates a Set3 with the required capacity and adds all (unique) elements to this set.
 
 If the array contains duplicates, the duplicates are omitted. If data is nil, an empty Set3 is returned.
 
 Example:
 
-	set1 := NewSet3[int]()
+	set1 := EmptySet3[int]()
 	set1.Add(1)
 	set1.Add(2)
 	set1.Add(3)
-	set2 := AsSet3([]int{1, 2, 3}) // set1 and set2 are equal
+	set2 := Set3FromArray([]int{1, 2, 3}) // set1 and set2 are equal
 */
-func AsSet3[T comparable](data []T) *Set3[T] {
+func Set3FromArray[T comparable](data []T) *Set3[T] {
 	if data == nil {
-		return NewSet3[T]()
+		return EmptySet3[T]()
 	}
-	result := NewSet3WithSize[T](uint32(len(data))) //nolint:gosec
+	result := EmptySet3WithCapacity[T](uint32(len(data))) //nolint:gosec
 	for _, e := range data {
 		result.Add(e)
 	}
@@ -212,7 +236,7 @@ Cloning is 'cheap' in comparison with creating a new set and adding all elements
 
 Example:
 
-	set1 := NewSet3[int]()
+	set1 := EmptySet3[int]()
 	set1.Add(1)
 	set1.Add(2)
 	set1.Add(3)
@@ -240,7 +264,7 @@ Contains returns true if the element is contained in thisSet.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
@@ -287,11 +311,11 @@ If thatSet is empty, ContainsAll returns true. If thatSet is nil, ContainsAll re
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
-	emptyset := NewSet3[int]()
+	emptyset := EmptySet3[int]()
 	b := set.ContainsAll(emptyset) // b will be true
 */
 func (thisSet *Set3[T]) ContainsAll(thatSet *Set3[T]) bool {
@@ -313,20 +337,47 @@ func (thisSet *Set3[T]) ContainsAll(thatSet *Set3[T]) bool {
 	return true
 }
 
-/*
-Returns true if thisSet contains all elements from the given data array.
 
-If the length of data is zero, ContainsAllFrom returns true. If data is nil, ContainsAllFrom returns true.
+/*
+Returns true if thisSet contains all of the given argument values.
+
+If the number of arguments is zero, ContainsAllOf returns true.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
-	b := set.ContainsAllFrom([]int{2,3,4}) // b will be false
+	b := set.ContainsAllFrom(2,3,4) // b will be false
 */
-func (thisSet *Set3[T]) ContainsAllFrom(data []T) bool {
+func (thisSet *Set3[T]) ContainsAllOf(args ...T) bool {
+	if args == nil {
+		// nil is interpreted as empty set
+		return true
+	}
+	for _, e := range args {
+		if !thisSet.Contains(e) {
+			return false
+		}
+	}
+	return true
+}
+
+/*
+Returns true if thisSet contains all elements from the given data array.
+
+If the length of data is zero, ContainsAllFromArray returns true. If data is nil, ContainsAllFromArray returns true.
+
+Example:
+
+	set := EmptySet3[int]()
+	set.Add(1)
+	set.Add(2)
+	set.Add(3)
+	b := set.ContainsAllFromArray([]int{2,3,4}) // b will be false
+*/
+func (thisSet *Set3[T]) ContainsAllFromArray(data []T) bool {
 	if data == nil {
 		// nil is interpreted as empty set
 		return true
@@ -346,8 +397,8 @@ If thatSet is nil, Equals returns true if and only if thisSet is empty.
 
 Example:
 
-	set1 := NewSet3[int]()
-	set2 := NewSet3[int]()
+	set1 := EmptySet3[int]()
+	set2 := EmptySet3[int]()
 	b1 := set1.Equals(set2) // b1 will be true
 	set1.Add(7)
 	set2.Add(31)
@@ -436,7 +487,7 @@ ToArray allocates an array of type T and adds all elements of thisSet to it. The
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(7)
 	set.Add(31)
 	intArray := set.ToArray() // will be an []int of length 2 containing 7 and 31 in arbitrary order
@@ -456,7 +507,7 @@ Inserts the element into thisSet if it is not yet in thisSet.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(7)
 */
 func (thisSet *Set3[T]) Add(element T) {
@@ -509,10 +560,10 @@ If thatSet is nil, nothing is added to thisSet.
 
 Example:
 
-	set1 := NewSet3[int]()
+	set1 := EmptySet3[int]()
 	set1.Add(1)
 	set1.Add(2)
-	set2 := NewSet3[int]()
+	set2 := EmptySet3[int]()
 	set2.Add(2)
 	set2.Add(3)
 	set1.AddAll(set2) // set1 will now contain 1, 2, 3
@@ -526,6 +577,28 @@ func (thisSet *Set3[T]) AddAll(thatSet *Set3[T]) {
 	}
 }
 
+
+/*
+Inserts all parameter values that are not yet in thisSet into thisSet.
+
+If the number of parameters is zero, nothing is added to thisSet.
+
+Example:
+
+	set := EmptySet3[int]()
+	set.Add(1)
+	set.Add(2)
+	set.AddAllOf(2,3) // set will now contain 1, 2, 3
+*/
+func (thisSet *Set3[T]) AddAllOf(args ...T) {
+	if args == nil {
+		return
+	}
+	for _, e := range args {
+		thisSet.Add(e)
+	}
+}
+
 /*
 Inserts all elements from the given data array that are not yet in thisSet into thisSet.
 
@@ -533,12 +606,12 @@ If data is nil, nothing is added to thisSet.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
-	set.AddAllFrom([]int{2,3}]) // set will now contain 1, 2, 3
+	set.AddAllFromArray([]int{2,3}]) // set will now contain 1, 2, 3
 */
-func (thisSet *Set3[T]) AddAllFrom(data []T) {
+func (thisSet *Set3[T]) AddAllFromArray(data []T) {
 	if data == nil {
 		return
 	}
@@ -550,25 +623,25 @@ func (thisSet *Set3[T]) AddAllFrom(data []T) {
 /*
 Creates a new Set3 as a mathematical union of the elements from thisSet and thatSet.
 
-If thatSet is nil, Union returns a clone of thisSet.
+If thatSet is nil, Unite returns a clone of thisSet.
 
 Example:
 
-	set1 := NewSet3[int]()
+	set1 := EmptySet3[int]()
 	set1.Add(1)
 	set1.Add(2)
-	set2 := NewSet3[int]()
+	set2 := EmptySet3[int]()
 	set2.Add(2)
 	set2.Add(3)
 
-	u := set1.Union(set2) // set1 and set2 remain unchanged, u will contain 1, 2, 3
+	u := set1.Unite(set2) // set1 and set2 remain unchanged, u will contain 1, 2, 3
 */
-func (thisSet *Set3[T]) Union(thatSet *Set3[T]) *Set3[T] {
+func (thisSet *Set3[T]) Unite(thatSet *Set3[T]) *Set3[T] {
 	if thatSet == nil {
 		return thisSet.Clone()
 	}
 	potentialSize := thisSet.Count() + thatSet.Count()
-	result := NewSet3WithSize[T](potentialSize)
+	result := EmptySet3WithCapacity[T](potentialSize)
 	for e := range thisSet.MutableRange() {
 		result.Add(e)
 	}
@@ -598,7 +671,7 @@ Removes the given element from thisSet if it is in thisSet, returns whether or n
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Remove(2)	// nothing happens to set
 	set.Remove(1)	// set will be empty
@@ -669,11 +742,11 @@ If thatSet is nil, nothing happens.
 
 Example:
 
-	set1 := NewSet3[int]()
+	set1 := EmptySet3[int]()
 	set1.Add(1)
 	set1.Add(2)
 	set1.Add(3)
-	set2 := NewSet3[int]()
+	set2 := EmptySet3[int]()
 	set2.Add(3)
 	set2.Add(4)
 	set1.RemoveAll(set2) // set1 will now contain 1, 2
@@ -688,19 +761,41 @@ func (thisSet *Set3[T]) RemoveAll(thatSet *Set3[T]) {
 }
 
 /*
+Removes all elements from thisSet that are passed as arguments.
+
+If no arguments are passed, nothing happens.
+
+Example:
+
+	set := EmptySet3[int]()
+	set.Add(1)
+	set.Add(2)
+	set.Add(3)
+	set.RemoveAllOf(3,4) // set will now contain 1, 2
+*/
+func (thisSet *Set3[T]) RemoveAllOf(args ...T) {
+	if args == nil {
+		return
+	}
+	for _, e := range args {
+		thisSet.Remove(e)
+	}
+}
+
+/*
 Removes all elements from thisSet that are in the data array.
 
 If data is nil, nothing happens.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
-	set.RemoveAllFrom([]int{3,4}]) // set will now contain 1, 2
+	set.RemoveAllFromArray([]int{3,4}]) // set will now contain 1, 2
 */
-func (thisSet *Set3[T]) RemoveAllFrom(data []T) {
+func (thisSet *Set3[T]) RemoveAllFromArray(data []T) {
 	if data == nil {
 		return
 	}
@@ -712,25 +807,25 @@ func (thisSet *Set3[T]) RemoveAllFrom(data []T) {
 /*
 Creates a new Set3 as a mathematical difference between thisSet and thatSet. The result is a new Set3 that contains elements that are in thisSet but not in thatSet.
 
-If thatSet is nil, Difference returns a clone of thisSet.
+If thatSet is nil, Subtract returns a clone of thisSet.
 
 Example:
 
-	set1 := NewSet3[int]()
+	set1 := EmptySet3[int]()
 	set1.Add(1)
 	set1.Add(2)
 	set1.Add(3)
-	set2 := NewSet3[int]()
+	set2 := EmptySet3[int]()
 	set2.Add(3)
 	set2.Add(4)
-	d := set1.Difference(set2) // set1 and set2 are not altered, d will contain 1, 2
+	d := set1.Subtract(set2) // set1 and set2 are not altered, d will contain 1, 2
 */
-func (thisSet *Set3[T]) Difference(thatSet *Set3[T]) *Set3[T] {
+func (thisSet *Set3[T]) Subtract(thatSet *Set3[T]) *Set3[T] {
 	if thatSet == nil {
 		return thisSet.Clone()
 	}
 	potentialSize := thisSet.Count()
-	result := NewSet3WithSize[T](potentialSize)
+	result := EmptySet3WithCapacity[T](potentialSize)
 	for e := range thisSet.MutableRange() {
 		if !thatSet.Contains(e) {
 			result.Add(e)
@@ -744,7 +839,7 @@ Clear removes all elements from thisSet.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Clear()  // set will be empty, Count() will return 0
@@ -764,22 +859,22 @@ func (thisSet *Set3[T]) Clear() {
 /*
 Creates a new Set3 as a mathematical intersection between this and that. The result is a new Set3 that contains elements that are in both sets.
 
-If thatSet is nil, Intersection returns an empty Set3.
+If thatSet is nil, Intersect returns an empty Set3.
 
 Example:
 
-	set1 := NewSet3[int]()
+	set1 := EmptySet3[int]()
 	set1.Add(1)
 	set1.Add(2)
 	set1.Add(3)
-	set2 := NewSet3[int]()
+	set2 := EmptySet3[int]()
 	set2.Add(3)
 	set2.Add(4)
-	intersect := set1.Intersection(set2) // set1 and set2 are not altered, intersect will contain 3
+	intersect := set1.Intersect(set2) // set1 and set2 are not altered, intersect will contain 3
 */
-func (thisSet *Set3[T]) Intersection(thatSet *Set3[T]) *Set3[T] {
+func (thisSet *Set3[T]) Intersect(thatSet *Set3[T]) *Set3[T] {
 	if thatSet == nil {
-		return NewSet3[T]()
+		return EmptySet3[T]()
 	}
 
 	var smallerSet *Set3[T]
@@ -794,7 +889,7 @@ func (thisSet *Set3[T]) Intersection(thatSet *Set3[T]) *Set3[T] {
 	}
 
 	potentialSize := smallerSet.Count()
-	result := NewSet3WithSize[T](potentialSize)
+	result := EmptySet3WithCapacity[T](potentialSize)
 	for e := range smallerSet.ImmutableRange() {
 		if biggerSet.Contains(e) {
 			result.Add(e)
@@ -806,19 +901,19 @@ func (thisSet *Set3[T]) Intersection(thatSet *Set3[T]) *Set3[T] {
 /*
 Creates a new Set3 as a mathematical intersection between thisSet and the elements of the data array. The result is a new Set3.
 
-If data is nil, IntersectionFrom returns an empty Set3.
+If data is nil, IntersectWithArray returns an empty Set3.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
-	intersect := set.IntersectionFrom([]int{3,4}]) // set1 and set2 are not altered, intersect will contain 3
+	intersect := set.IntersectWithArray([]int{3,4}]) // set1 and set2 are not altered, intersect will contain 3
 */
-func (thisSet *Set3[T]) IntersectionFrom(data []T) *Set3[T] {
+func (thisSet *Set3[T]) IntersectWithArray(data []T) *Set3[T] {
 	if data == nil {
-		return NewSet3[T]()
+		return EmptySet3[T]()
 	}
 
 	var potentialSize uint32
@@ -829,7 +924,7 @@ func (thisSet *Set3[T]) IntersectionFrom(data []T) *Set3[T] {
 		potentialSize = uint32(len(data)) //nolint:gosec
 	}
 
-	result := NewSet3WithSize[T](potentialSize)
+	result := EmptySet3WithCapacity[T](potentialSize)
 	for _, e := range data {
 		if thisSet.Contains(e) {
 			result.Add(e)
@@ -845,11 +940,11 @@ Returns false if thatSet is nil.
 
 Example:
 
-	set1 := NewSet3[int]()
+	set1 := EmptySet3[int]()
 	set1.Add(1)
 	set1.Add(2)
 	set1.Add(3)
-	set2 := NewSet3[int]()
+	set2 := EmptySet3[int]()
 	set2.Add(0)
 	set2.Add(1)
 	b := set1.ContainsAny(set2) // b will be true
@@ -878,6 +973,32 @@ func (thisSet *Set3[T]) ContainsAny(thatSet *Set3[T]) bool {
 	return false
 }
 
+
+/*
+Checks if thisSet contains any of the given argument values.
+
+Returns false if the number of arguments is zero.
+
+Example:
+
+	set := EmptySet3[int]()
+	set.Add(1)
+	set.Add(2)
+	set.Add(3)
+	b := set1.ContainsAnyOf(4, 5, 6) // b will be false
+*/
+func (thisSet *Set3[T]) ContainsAnyOf(args ...T) bool {
+	if args == nil {
+		return false
+	}
+	for _, d := range args {
+		if thisSet.Contains(d) {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 Checks if thisSet contains any element fromthe given data array.
 
@@ -885,13 +1006,13 @@ Returns false if data is nil.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
-	b := set1.ContainsAnyFrom([]int{4, 5, 6}) // b will be false
+	b := set1.ContainsAnyFromArray([]int{4, 5, 6}) // b will be false
 */
-func (thisSet *Set3[T]) ContainsAnyFrom(data []T) bool {
+func (thisSet *Set3[T]) ContainsAnyFromArray(data []T) bool {
 	if data == nil {
 		return false
 	}
@@ -908,7 +1029,7 @@ Count returns the number of elements in thisSet.
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(7)
 	set.Add(8)
 	set.Add(9)
@@ -931,7 +1052,7 @@ Rorganizes the backend of thisSet for optimal space efficiency: This call rehash
 
 Example:
 
-	set := NewSet3[int](1_000_000) // allocates a big hashset
+	set := EmptySet3[int](1_000_000) // allocates a big hashset
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
@@ -949,7 +1070,7 @@ If newSize is smaller than the current number of elements in thisSet, this funct
 
 Example:
 
-	set := NewSet3[int]()
+	set := EmptySet3[int]()
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
