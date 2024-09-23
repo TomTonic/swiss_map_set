@@ -359,7 +359,7 @@ func BenchmarkSet3Fill(b *testing.B) {
 		time.Sleep(1 * time.Second)
 		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				resultSet := EmptySet3WithCapacity[uint32](uint32(cfg.inintialSetSize))
+				resultSet := EmptyWithCapacity[uint32](uint32(cfg.inintialSetSize))
 				for j := 0; j < len(setValues); j++ {
 					resultSet.Add(setValues[j])
 				}
@@ -389,7 +389,7 @@ func BenchmarkNativeMapFill(b *testing.B) {
 func BenchmarkSet3Find(b *testing.B) {
 	for _, cfg := range config {
 		setValues, searchElements := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		resultSet := EmptySet3WithCapacity[uint32](uint32(cfg.inintialSetSize))
+		resultSet := EmptyWithCapacity[uint32](uint32(cfg.inintialSetSize))
 		for j := 0; j < len(setValues); j++ {
 			resultSet.Add(setValues[j])
 		}

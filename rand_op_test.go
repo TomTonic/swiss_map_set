@@ -44,7 +44,7 @@ func TestRandomOps(t *testing.T) {
 			sets := make([]*Set3[uint32], cfg.numSets)
 			// fill all sets
 			for i := 0; i < cfg.numSets; i++ {
-				sets[i] = EmptySet3[uint32]()
+				sets[i] = Empty[uint32]()
 				targetSize := cfg.setSize + rand.Intn(cfg.setVar)
 				for j := 0; j < targetSize; j++ {
 					sets[i].Add(rand.Uint32() % uint32(cfg.mod))
@@ -75,7 +75,7 @@ func TestRandomOps(t *testing.T) {
 			}
 
 			// add all elements to a superset
-			superset := EmptySet3[uint32]()
+			superset := Empty[uint32]()
 			for i := 0; i < cfg.numSets; i++ {
 				superset.AddAll(sets[i])
 			}
@@ -86,7 +86,7 @@ func TestRandomOps(t *testing.T) {
 				stringIntersect := intersect.String()
 				stringSet := sets[i].String()
 				assert.True(t, equal, stringIntersect+" != "+stringSet)
-				newSet := Set3FromArray([]uint32{rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod),
+				newSet := FromArray([]uint32{rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod),
 					rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod)})
 				stringNewSet := newSet.String()
 				unequal := intersect.Equals(newSet)
