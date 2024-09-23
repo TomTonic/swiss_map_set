@@ -2,78 +2,69 @@
 
 (This text is derived from https://github.com/coreinfrastructure/best-practices-badge/blob/main/CONTRIBUTING.md) 
 
-**Feedback and contributions are very welcome!**
+Feedback and contributions are very welcome! Here’s how you can contribute, divided into the following sections:
 
-Here's help on how to make contributions, divided into the following sections:
+* General Information
+* Vulnerability Reporting
+* Documentation Changes
+* Code Changes
+* Reuse (Third-Party Components)
 
-* general information,
-* vulnerability reporting,
-* documentation changes,
-* code changes,
-* how to check proposed changes before submitting them,
-* reuse (supply chain for third-party components, including updating them)
+## General Information
 
-## General information
-
-For specific proposals, please provide them as
+For specific proposals, please submit them as
 [pull requests](https://github.com/TomTonic/Set3/pulls)
 or
 [issues](https://github.com/TomTonic/Set3/issues)
 via our
 [GitHub site](https://github.com/coreinfrastructure/best-practices-badge).
+Welcome aboard!
 
-You are welcome aboard!
+### Pull Requests and Branches
 
-### Pull requests and different branches recommended
+Pull requests are preferred for their specificity.
+For more on creating a pull request, see
+[GitHub’s guide](https://help.github.com/articles/using-pull-requests/).
 
-Pull requests are preferred, since they are specific.
-For more about how to create a pull request, see
-<https://help.github.com/articles/using-pull-requests/>.
-
-We recommend creating different branches for different (logical)
-changes, and creating a pull request when you're done into the main branch.
-See the GitHub documentation on
+We request creating different branches for different logical
+changes and submitting a pull request to the main branch when done.
+See GitHub's documentation on
 [creating branches](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/)
 and
 [using pull requests](https://help.github.com/articles/using-pull-requests/).
 
-### How we handle proposals
+### Handling Proposals
 
 We use GitHub to track proposed changes via its
 [issue tracker](https://github.com/TomTonic/Set3/issues) and
 [pull requests](https://github.com/TomTonic/Set3/pulls).
-Specific changes are proposed using those mechanisms.
-Issues are assigned to an individual, who works it and then marks it complete.
+Issues are assigned to an individual who works on them and marks them complete.
 If there are questions or objections, the conversation area of that
-issue or pull request is used to resolve it.
+issue or pull request is used to resolve them.
 
-### Two-person review
+### Reviews
 
-Our policy is that as many as possible proposed modifications will be reviewed
-before release by a person other than the author,
-to determine if it is a worthwhile modification and free of known issues
-which would argue against its inclusion.
+Our policy is to have as many proposed modifications as possible reviewed by
+someone other than the author. This ensures the modification is worthwhile and
+free of known issues.
 
-We achieve this by splitting proposals into two kinds:
+We categorize proposals into two types:
 
-1. Low-risk modifications.  These modifications are being proposed by
-   people authorized to commit directly, pass all tests, and are unlikely
-   to have problems.  These include documentation/text updates and/or updates
-   to existing functions (especially minor updates) where no risk (such as a security risk)
-   have been identified.  The project lead can decide that any particular
-   modification is low-risk.
-2. Other modifications.  These other modifications need to be
-   reviewed by someone else or the project lead can decide to accept
-   the modification.  Typically this is done by creating a branch and a
-   pull request so that it can be reviewed before accepting it.
+1. **Low-risk modifications.**  Proposed by authorized committers, pass all
+   tests, and are unlikely to have problems. These include documentation
+   updates and minor function updates. The project lead can designate any
+   modification as low-risk.
+
+2. Other modifications.  Require review by someone else or acceptance by the
+   project lead. Typically, this involves creating a branch and a pull request
+   for review before acceptance.
 
 ### Developer Certificate of Origin (DCO)
 
-All contributions (including pull requests) must agree to
-the Linux kernel developers'
+All contributions must agree to the Linux kernel developers'
 [Developer Certificate of Origin (DCO) version 1.1](https://developercertificate.org).
-This is a developer's certification that he or she has the right to
-submit the patch for inclusion into the project.
+This certifies that the contributor has the right to submit the patch for
+inclusion in the project.
 
 Simply submitting a contribution implies this agreement, however,
 please include a "Signed-off-by" tag in every patch
@@ -81,9 +72,8 @@ please include a "Signed-off-by" tag in every patch
 You can do this with <tt>git commit --signoff</tt> (the <tt>-s</tt> flag
 is a synonym for <tt>--signoff</tt>).
 
-Another way to do this is to write the following at the end of the commit
-message, on a line by itself separated by a blank line from the body of
-the commit:
+Alternatively, add the following at the end of the commit message, separated
+by a blank line from the body of the commit:
 
 ````
 Signed-off-by: YOUR NAME <YOUR.EMAIL@EXAMPLE.COM>
@@ -102,101 +92,78 @@ It's not practical to fix old contributions in git, so if one is forgotten,
 do not try to fix them.  We presume that if someone sometimes used a DCO,
 a commit without a DCO is an accident and the DCO still applies.
 
-### We are proactive
+### Proactive Approach
 
-In general we try to be proactive to detect and eliminate
+We proactively detect and eliminate
 mistakes and vulnerabilities as soon as possible,
-and to reduce their impact when they do happen.
-We use a defensive design and coding style to reduce the likelihood of mistakes,
-a variety of tools that try to detect mistakes early,
+reducing their impact.
+We use defensive design, coding styles,
+various tools,
 and an automatic test suite with significant coverage.
-We also release the software as open source software so others can review it.
+We also release the software as open source for community review.
 
-Since early detection and impact reduction can never be perfect, we also try to
-detect and repair problems during deployment as quickly as possible.
-This is *especially* true for security issues.
+## Vulnerability Reporting (security issues)
 
-## <span id="how_to_report_vulnerabilities">Vulnerability reporting (security issues)</a>
+Please privately report vulnerabilities you find so we can fix them.
 
-Please privately report vulnerabilities you find, so we can fix them!
+See [SECURITY.md](./SECURITY.md) for information on how to report vulnerabilities privately.
 
-See [SECURITY.md](./SECURITY.md) for information on how to privately report vulnerabilities.
+## Documentation Changes
 
-## Documentation changes
-
-Most of the documentation is in "markdown" format.
-All markdown files use the .md filename extension.
+Most documentation is in Markdown format (.md files).
 
 Where reasonable, limit yourself to Markdown
-that will be accepted by different markdown processors
-(e.g., what is specified by CommonMark or the original Markdown).
+that will be accepted by different processors
+(e.g., CommonMark or original Markdown).
 
-## Code changes
+## Code Changes
 
-The code should strive to be DRY (don't repeat yourself),
+Code should be DRY (Don’t Repeat Yourself),
 clear, and obviously correct.
-Some technical debt is inevitable, just don't bankrupt us with it.
-Improved refactorizations are welcome.
+Some technical debt is inevitable, but avoid excessive debt.
+Improving refactorings are welcome.
 
-### Automated tests
+### Automated Tests
 
-When adding or changing functionality, please include new tests for them as
+When adding or changing functionality, include new tests as
 part of your contribution.
+Ensure Go code has at least 98% statement coverage.
+Additional tests are welcome.
 
-We require the Go code to have at least 98% statement coverage;
-please ensure your contributions do not lower the coverage below that minimum.
-Additional tests are very welcome.
+We encourage test-driven development (TDD): create tests first, ensure they fail,
+then add code to pass the tests.
+Each git commit should include both
+the test and the improvement to facilitate `git bisect`.
 
-We encourage tests to be created first, run to ensure they fail, and
-then add code to implement the test (aka test driven development).
-However, each git commit should have both
-the test and improvement in the *same* commit,
-because 'git bisect' will then work well.
+### Security, Privacy, and Performance
 
-*WARNING*: It is possible that some tests may intermittently fail, even though
-the software works fine.
-If tests fail, restart to see if it's a problem with the software
-or the tests.
-Where possible, try to find and fix the problem; we have worked to
-eliminate this, and at this point believe we have fixed it.
-
-### Security, privacy, and performance
-
-Pay attention to security, and work *with* (not against) our
+Pay attention to security and work with our
 security hardening mechanisms.
+Protect private information, especially passwords and email addresses.
+Avoid tracking mechanisms where possible
+and ensure third parties can’t use interactions for tracking.
 
-Protect private information, in particular passwords and email addresses.
-Avoid mechanisms that could be used for tracking where possible
-(we do need to verify people are logged in for some operations),
-and ensure that third parties can't use interactions for tracking.
-When sending an email to an existing account, use the original account
-email not the claimed email address sent now; for why, see
-[Hacking GitHub with Unicode's dotless 'i'](https://eng.getwisdom.io/hacking-github-with-unicode-dotless-i/).
+We aim for decent performance for typical users.
+Use benchmark testing as needed
+(e.g., see <https://github.com/TomTonic/Set3/blob/main/run_benchmark.txt>).
 
-We want the software to have decent performance for typical users.
-Use benchmark testing, e.g., see https://github.com/TomTonic/Set3/blob/main/run_benchmark.txt
+### Continuous Integration
 
-### Testing during continuous integration
+We use [Github Actions](https://github.com/TomTonic/Set3/actions)
+for continuous integration. If problems are found, please fix them.
 
-Note that we use
-[various Github Actions](https://github.com/TomTonic/Set3/actions)
-for continuous integration tools to check changes
-after they are checked into GitHub; if they find problems, please fix them.
+## Git Commit Messages
 
-## Git commit messages
+Follow these guidelines for writing git commit messages:
 
-When writing git commit messages, try to follow the guidelines in
-[How to Write a Git Commit Message](https://chris.beams.io/posts/git-commit/):
-
-1.  Separate subject from body with a blank line
-2.  Limit the subject line to 50 characters.
-    (We're flexible on this, but *do* limit it to 72 characters or less.)
-3.  Capitalize the subject line
-4.  Do not end the subject line with a period
-5.  Use the imperative mood in the subject line (*command* form)
-6.  Wrap the body at 72 characters ("<tt>fmt -w 72</tt>")
-7.  Use the body to explain what and why vs. how
-    (git tracks how it was changed in detail, don't repeat that)
+1.  Separate subject from body with a blank line.
+2.  Limit the subject line to 50 characters (flexible up to 72 characters).
+3.  Capitalize the subject line.
+4.  Do not end the subject line with a period.
+5.  Use the imperative mood in the subject line (*command* form).
+6.  Wrap the body at 72 characters (`fmt -w 72`).
+7.  Use the body to explain what and why, not how
+    (git tracks how it was changed in detail, don't repeat that).
 
 ## Reuse (supply chain)
 
