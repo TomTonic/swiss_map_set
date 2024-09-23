@@ -1,4 +1,4 @@
-package Set3
+package set3
 
 import (
 	"fmt"

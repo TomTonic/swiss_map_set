@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package Set3
+package set3
 
 import (
 	"fmt"
@@ -959,7 +959,7 @@ func (thisSet *Set3[T]) RehashTo(newSize uint32) {
 	if newSize < thisSet.Count() {
 		return
 	}
-	newNumGroups := uint32(calcReqNrOfGroups(newSize))
+	newNumGroups := uint32(calcReqNrOfGroups(newSize)) //nolint:gosec
 	thisSet.rehashToNumGroups(newNumGroups)
 }
 
