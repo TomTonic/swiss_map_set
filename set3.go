@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package Set3
+package set3
 
 import (
 	"fmt"
@@ -62,13 +62,13 @@ type set3Group[T comparable] struct {
 
 var set3hextable = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}
 
-func (this *set3Group[T]) String() string {
+func (thisSet *set3Group[T]) String() string {
 	var builder strings.Builder
 	var mask uint64 = 0xFF
 	shr := 0
 	builder.WriteString("[")
 	for i := range set3groupSize {
-		b := this.ctrl & mask
+		b := thisSet.ctrl & mask
 		b >>= shr
 		mask <<= 8
 		shr += 8
@@ -86,7 +86,7 @@ func (this *set3Group[T]) String() string {
 		}
 	}
 	builder.WriteString("]->{")
-	for i, v := range this.slot {
+	for i, v := range thisSet.slot {
 		builder.WriteString(fmt.Sprintf("%v", v))
 		if i < set3groupSize-1 {
 			builder.WriteString("|")
@@ -106,7 +106,7 @@ type Set3[T comparable] struct {
 }
 
 /*
-Returns a string representation of the elements of this Set3 in Roster notation (https://en.wikipedia.org/wiki/Set_(mathematics)#Roster_notation).
+Returns a string representation of the elements of thisSet in Roster notation (https://en.wikipedia.org/wiki/Set_(mathematics)#Roster_notation).
 The order of the elements in the result is arbitrarily.
 
 Example:
@@ -117,15 +117,15 @@ Example:
 	set.Add(3)
 	fmt.Println(set) // will print "{2,3,1}" with the numbers in arbitrary order
 */
-func (this *Set3[T]) String() string {
-	if this == nil {
+func (thisSet *Set3[T]) String() string {
+	if thisSet == nil {
 		return "{nil}"
 	}
 	var builder strings.Builder
 	builder.WriteString("{")
-	total := this.Count()
+	total := thisSet.Count()
 	cnt := uint32(0)
-	for e := range this.MutableRange() {
+	for e := range thisSet.MutableRange() {
 		builder.WriteString(fmt.Sprintf("%v", e))
 		if cnt < total-1 {
 			builder.WriteString(",")
@@ -182,7 +182,7 @@ func calcReqNrOfGroups(size uint32) int {
 }
 
 /*
-AsSet3 is a convenience constructor to directly create a Set3 from given values. It creates a Set3 with the required capacity and adds all (unique) elements to this Set3.
+AsSet3 is a convenience constructor to directly create a Set3 from given values. It creates a Set3 with the required capacity and adds all (unique) elements to thisSet.
 
 If the array contains duplicates, the duplicates are omitted. If data is nil, an empty Set3 is returned.
 
@@ -198,7 +198,7 @@ func AsSet3[T comparable](data []T) *Set3[T] {
 	if data == nil {
 		return NewSet3[T]()
 	}
-	result := NewSet3WithSize[T](uint32(len(data)))
+	result := NewSet3WithSize[T](uint32(len(data))) //nolint:gosec
 	for _, e := range data {
 		result.Add(e)
 	}
@@ -206,7 +206,7 @@ func AsSet3[T comparable](data []T) *Set3[T] {
 }
 
 /*
-Clone creates an exact clone of this Set3. You can manipulate both clones independently.
+Clone creates an exact clone of thisSet. You can manipulate both clones independently.
 
 Cloning is 'cheap' in comparison with creating a new set and adding all elements from this set, as only the backing data structures are copied (no rehashing is applied).
 
@@ -218,25 +218,25 @@ Example:
 	set1.Add(3)
 	set2 := set1.Clone() // set2 will be an exact but independent clone of set1
 */
-func (this *Set3[T]) Clone() *Set3[T] {
+func (thisSet *Set3[T]) Clone() *Set3[T] {
 	result := &Set3[T]{
-		hashFunction: this.hashFunction,
-		elementLimit: this.elementLimit,
-		resident:     this.resident,
-		dead:         this.dead,
-		group:        this.fullCopyGroups(),
+		hashFunction: thisSet.hashFunction,
+		elementLimit: thisSet.elementLimit,
+		resident:     thisSet.resident,
+		dead:         thisSet.dead,
+		group:        thisSet.fullCopyGroups(),
 	}
 	return result
 }
 
-func (this *Set3[T]) fullCopyGroups() []set3Group[T] {
-	result := make([]set3Group[T], len(this.group))
-	copy(result, this.group)
+func (thisSet *Set3[T]) fullCopyGroups() []set3Group[T] {
+	result := make([]set3Group[T], len(thisSet.group))
+	copy(result, thisSet.group)
 	return result
 }
 
 /*
-Contains returns true if the element is contained in this Set3.
+Contains returns true if the element is contained in thisSet.
 
 Example:
 
@@ -247,18 +247,17 @@ Example:
 	b1 := set.Contains(2) // b1 will be true
 	b2 := set.Contains(4) // b2 will be false
 */
-func (this *Set3[T]) Contains(element T) bool {
-	hash := this.hashFunction.Hash(element)
+func (thisSet *Set3[T]) Contains(element T) bool {
+	hash := thisSet.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpCnt := uint64(len(this.group))
+	grpCnt := uint64(len(thisSet.group))
 	grpIdx := H1 % grpCnt
 	for {
-		group := &this.group[grpIdx]
+		group := &thisSet.group[grpIdx]
 		ctrl := group.ctrl
 		slot := &(group.slot)
 		matches := set3ctlrMatchH2(ctrl, H2)
-		//matches := simd.MatchCRTLhash(ctrl, H2)
 		for matches != 0 {
 			s := set3nextMatch(&matches)
 			if element == slot[s] {
@@ -268,14 +267,13 @@ func (this *Set3[T]) Contains(element T) bool {
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
 		matches = set3ctlrMatchEmpty(ctrl)
-		//matches = simd.MatchCRTLempty(ctrl)
 		if matches != 0 {
 			// there is an empty slot - the element, if it had been added, hat either
 			// been found until now or it had been added in the next empty spot -
 			// well, this is the next empty spot...
 			return false
 		}
-		grpIdx += 1 // carousel through all groups
+		grpIdx++ // carousel through all groups
 		if grpIdx >= grpCnt {
 			grpIdx = 0
 		}
@@ -283,9 +281,9 @@ func (this *Set3[T]) Contains(element T) bool {
 }
 
 /*
-Returns true if this Set3 contains all elements from that Set3.
+Returns true if thisSet contains all elements from thatSet.
 
-If that Set3 is empty, ContainsAll returns true. If that Set3 is nil, ContainsAll returns true.
+If thatSet is empty, ContainsAll returns true. If thatSet is nil, ContainsAll returns true.
 
 Example:
 
@@ -296,19 +294,19 @@ Example:
 	emptyset := NewSet3[int]()
 	b := set.ContainsAll(emptyset) // b will be true
 */
-func (this *Set3[T]) ContainsAll(that *Set3[T]) bool {
-	if this == that {
+func (thisSet *Set3[T]) ContainsAll(thatSet *Set3[T]) bool {
+	if thisSet == thatSet {
 		return true
 	}
-	if that == nil {
+	if thatSet == nil {
 		// nil is interpreted as empty set
 		return true
 	}
-	if this.Count() < that.Count() {
+	if thisSet.Count() < thatSet.Count() {
 		return false
 	}
-	for e := range that.MutableRange() {
-		if !this.Contains(e) {
+	for e := range thatSet.MutableRange() {
+		if !thisSet.Contains(e) {
 			return false
 		}
 	}
@@ -316,7 +314,7 @@ func (this *Set3[T]) ContainsAll(that *Set3[T]) bool {
 }
 
 /*
-Returns true if this Set3 contains all elements from the given data array.
+Returns true if thisSet contains all elements from the given data array.
 
 If the length of data is zero, ContainsAllFrom returns true. If data is nil, ContainsAllFrom returns true.
 
@@ -328,13 +326,13 @@ Example:
 	set.Add(3)
 	b := set.ContainsAllFrom([]int{2,3,4}) // b will be false
 */
-func (this *Set3[T]) ContainsAllFrom(data []T) bool {
+func (thisSet *Set3[T]) ContainsAllFrom(data []T) bool {
 	if data == nil {
 		// nil is interpreted as empty set
 		return true
 	}
 	for _, e := range data {
-		if !this.Contains(e) {
+		if !thisSet.Contains(e) {
 			return false
 		}
 	}
@@ -342,9 +340,9 @@ func (this *Set3[T]) ContainsAllFrom(data []T) bool {
 }
 
 /*
-Returns true if this Set3 and that Set3 have the same size and contain the same elements.
+Returns true if thisSet and thatSet have the same size and contain the same elements.
 
-If that Set3 is nil, Equals returns true if and only if this Set3 is empty.
+If thatSet is nil, Equals returns true if and only if thisSet is empty.
 
 Example:
 
@@ -355,19 +353,19 @@ Example:
 	set2.Add(31)
 	b2 := set1.Equals(set2) // b2 will be false
 */
-func (this *Set3[T]) Equals(that *Set3[T]) bool {
-	if this == that {
+func (thisSet *Set3[T]) Equals(thatSet *Set3[T]) bool {
+	if thisSet == thatSet {
 		return true
 	}
-	if that == nil {
+	if thatSet == nil {
 		// nil is interpreted as empty set
-		return this.Count() == 0
+		return thisSet.Count() == 0
 	}
-	if this.Count() != that.Count() {
+	if thisSet.Count() != thatSet.Count() {
 		return false
 	}
-	for elem := range that.MutableRange() {
-		if !this.Contains(elem) {
+	for elem := range thatSet.MutableRange() {
+		if !thisSet.Contains(elem) {
 			return false
 		}
 	}
@@ -375,9 +373,9 @@ func (this *Set3[T]) Equals(that *Set3[T]) bool {
 }
 
 /*
-Iterates over all elements in this Set3.
+Iterates over all elements in thisSet.
 
-Caution: If this Set3 is changed during the iteration, the result is unpredictable. So if you want to add or remove elements to or from this Set3 during the itration, choose [ImmutableRange].
+Caution: If thisSet is changed during the iteration, the result is unpredictable. So if you want to add or remove elements to or from thisSet during the itration, choose [ImmutableRange].
 
 Example:
 
@@ -385,9 +383,9 @@ Example:
 		// do something with elem...
 	}
 */
-func (this *Set3[T]) MutableRange() iter.Seq[T] {
+func (thisSet *Set3[T]) MutableRange() iter.Seq[T] {
 	return func(yield func(T) bool) {
-		for _, group := range this.group {
+		for _, group := range thisSet.group {
 			ctrl := group.ctrl
 			if ctrl&set3hiBits != set3hiBits { // not all empty or deleted
 				slot := &(group.slot)
@@ -404,9 +402,9 @@ func (this *Set3[T]) MutableRange() iter.Seq[T] {
 }
 
 /*
-Iterates over all elements in this Set3.
+Iterates over all elements in thisSet.
 
-Makes an internal copy of the stored elements first, so you can add or remove elements to or from this Set3 during the itration, for example. To avoid this extra copy, e.g., for performance reasons, choose [MutableRange].
+Makes an internal copy of the stored elements first, so you can add or remove elements to or from thisSet during the itration, for example. To avoid this extra copy, e.g., for performance reasons, choose [MutableRange].
 
 Example:
 
@@ -414,9 +412,9 @@ Example:
 		// do something with elem...
 	}
 */
-func (this *Set3[T]) ImmutableRange() iter.Seq[T] {
+func (thisSet *Set3[T]) ImmutableRange() iter.Seq[T] {
 	return func(yield func(T) bool) {
-		groups := this.fullCopyGroups()
+		groups := thisSet.fullCopyGroups()
 		for _, group := range groups {
 			ctrl := group.ctrl
 			if ctrl&set3hiBits != set3hiBits { // not all empty or deleted
@@ -434,19 +432,19 @@ func (this *Set3[T]) ImmutableRange() iter.Seq[T] {
 }
 
 /*
-ToArray allocates an array of type T and adds all elements of this Set3 to it. The order of the elements in the resulting array is arbitrary.
+ToArray allocates an array of type T and adds all elements of thisSet to it. The order of the elements in the resulting array is arbitrary.
 
 Example:
 
 	set := NewSet3[int]()
 	set.Add(7)
 	set.Add(31)
-	int_array := set.ToArray() // will be an []int of length 2 containing 7 and 31 in arbitrary order
+	intArray := set.ToArray() // will be an []int of length 2 containing 7 and 31 in arbitrary order
 */
-func (this *Set3[T]) ToArray() []T {
-	result := make([]T, this.Count())
+func (thisSet *Set3[T]) ToArray() []T {
+	result := make([]T, thisSet.Count())
 	i := 0
-	for e := range this.MutableRange() {
+	for e := range thisSet.MutableRange() {
 		result[i] = e
 		i++
 	}
@@ -454,24 +452,24 @@ func (this *Set3[T]) ToArray() []T {
 }
 
 /*
-Inserts the element into this Set3 if it is not yet in this Set3.
+Inserts the element into thisSet if it is not yet in thisSet.
 
 Example:
 
 	set := NewSet3[int]()
 	set.Add(7)
 */
-func (this *Set3[T]) Add(element T) {
-	if this.resident >= this.elementLimit {
-		this.rehashToNumGroups(this.nextSize())
+func (thisSet *Set3[T]) Add(element T) {
+	if thisSet.resident >= thisSet.elementLimit {
+		thisSet.rehashToNumGroups(thisSet.nextSize())
 	}
-	hash := this.hashFunction.Hash(element)
+	hash := thisSet.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpCnt := uint64(len(this.group))
+	grpCnt := uint64(len(thisSet.group))
 	grpIdx := H1 % grpCnt
 	for {
-		group := &this.group[grpIdx]
+		group := &thisSet.group[grpIdx]
 		ctrl := group.ctrl
 		slot := &(group.slot)
 
@@ -493,11 +491,11 @@ func (this *Set3[T]) Add(element T) {
 			s := set3nextMatch(&matches)
 			group.ctrl = setCTRLat(ctrl, H2, s)
 			slot[s] = element
-			this.resident++
+			thisSet.resident++
 			return
 
 		}
-		grpIdx += 1 // carousel through all groups
+		grpIdx++ // carousel through all groups
 		if grpIdx >= grpCnt {
 			grpIdx = 0
 		}
@@ -505,9 +503,9 @@ func (this *Set3[T]) Add(element T) {
 }
 
 /*
-Inserts all elements from that Set3 that are not yet in this Set3 into this Set3.
+Inserts all elements from thatSet that are not yet in thisSet into thisSet.
 
-If that Set3 is nil, nothing is added to this Set3.
+If thatSet is nil, nothing is added to thisSet.
 
 Example:
 
@@ -519,19 +517,19 @@ Example:
 	set2.Add(3)
 	set1.AddAll(set2) // set1 will now contain 1, 2, 3
 */
-func (this *Set3[T]) AddAll(that *Set3[T]) {
-	if that == nil {
+func (thisSet *Set3[T]) AddAll(thatSet *Set3[T]) {
+	if thatSet == nil {
 		return
 	}
-	for e := range that.MutableRange() {
-		this.Add(e)
+	for e := range thatSet.MutableRange() {
+		thisSet.Add(e)
 	}
 }
 
 /*
-Inserts all elements from the given data array that are not yet in this Set3 into this Set3.
+Inserts all elements from the given data array that are not yet in thisSet into thisSet.
 
-If data is nil, nothing is added to this Set3.
+If data is nil, nothing is added to thisSet.
 
 Example:
 
@@ -540,19 +538,19 @@ Example:
 	set.Add(2)
 	set.AddAllFrom([]int{2,3}]) // set will now contain 1, 2, 3
 */
-func (this *Set3[T]) AddAllFrom(data []T) {
+func (thisSet *Set3[T]) AddAllFrom(data []T) {
 	if data == nil {
 		return
 	}
 	for _, e := range data {
-		this.Add(e)
+		thisSet.Add(e)
 	}
 }
 
 /*
-Creates a new Set3 as a mathematical union of the elements from this Set3 and that Set3.
+Creates a new Set3 as a mathematical union of the elements from thisSet and thatSet.
 
-If that Set3 is nil, Union returns a clone of this Set3.
+If thatSet is nil, Union returns a clone of thisSet.
 
 Example:
 
@@ -565,16 +563,16 @@ Example:
 
 	u := set1.Union(set2) // set1 and set2 remain unchanged, u will contain 1, 2, 3
 */
-func (this *Set3[T]) Union(that *Set3[T]) *Set3[T] {
-	if that == nil {
-		return this.Clone()
+func (thisSet *Set3[T]) Union(thatSet *Set3[T]) *Set3[T] {
+	if thatSet == nil {
+		return thisSet.Clone()
 	}
-	potentialSize := this.Count() + that.Count()
+	potentialSize := thisSet.Count() + thatSet.Count()
 	result := NewSet3WithSize[T](potentialSize)
-	for e := range this.MutableRange() {
+	for e := range thisSet.MutableRange() {
 		result.Add(e)
 	}
-	for e := range that.MutableRange() {
+	for e := range thatSet.MutableRange() {
 		result.Add(e)
 	}
 	return result
@@ -596,7 +594,7 @@ func isAnElementAt(ctrl uint64, pos int) bool {
 }
 
 /*
-Removes the given element from this Set3 if it is in this Set3, returns whether or not the element was in this Set3.
+Removes the given element from thisSet if it is in thisSet, returns whether or not the element was in thisSet.
 
 Example:
 
@@ -606,14 +604,14 @@ Example:
 	set.Remove(1)	// set will be empty
 	set.Remove(0)	// set will still be empty
 */
-func (this *Set3[T]) Remove(element T) bool {
-	hash := this.hashFunction.Hash(element)
+func (thisSet *Set3[T]) Remove(element T) bool {
+	hash := thisSet.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpCnt := uint64(len(this.group))
+	grpCnt := uint64(len(thisSet.group))
 	grpIdx := H1 % grpCnt
 	for {
-		group := &this.group[grpIdx]
+		group := &thisSet.group[grpIdx]
 		ctrl := group.ctrl
 		slot := &(group.slot)
 		matches := set3ctlrMatchH2(ctrl, H2)
@@ -630,17 +628,17 @@ func (this *Set3[T]) Remove(element T) bool {
 				// cause premature termination of probes into |g|.
 				if set3ctlrMatchEmpty(ctrl) != 0 {
 					group.ctrl = setCTRLat(ctrl, set3Empty, s)
-					this.resident--
+					thisSet.resident--
 				} else {
 					group.ctrl = setCTRLat(ctrl, set3Deleted, s)
-					this.dead++
+					thisSet.dead++
 					/*
 						// unfortunately, this is an invalid optimization, as the algorithm might stop searching for elements to early.
 						// if they spilled over in the next group, we unfortunately need all the tumbstones...
 						if group.ctrl == set3AllDeleted {
 							group.ctrl = set3AllEmpty
-							this.dead -= set3groupSize
-							this.resident -= set3groupSize
+							thisSet.dead -= set3groupSize
+							thisSet.resident -= set3groupSize
 						}
 					*/
 				}
@@ -657,7 +655,7 @@ func (this *Set3[T]) Remove(element T) bool {
 			// |element| absent
 			return false
 		}
-		grpIdx += 1 // linear probing
+		grpIdx++ // linear probing
 		if grpIdx >= grpCnt {
 			grpIdx = 0
 		}
@@ -665,9 +663,9 @@ func (this *Set3[T]) Remove(element T) bool {
 }
 
 /*
-Removes all elements from this Set3 that are in that Set3.
+Removes all elements from thisSet that are in thatSet.
 
-If that Set3 is nil, nothing happens.
+If thatSet is nil, nothing happens.
 
 Example:
 
@@ -680,17 +678,17 @@ Example:
 	set2.Add(4)
 	set1.RemoveAll(set2) // set1 will now contain 1, 2
 */
-func (this *Set3[T]) RemoveAll(that *Set3[T]) {
-	if that == nil {
+func (thisSet *Set3[T]) RemoveAll(thatSet *Set3[T]) {
+	if thatSet == nil {
 		return
 	}
-	for e := range that.MutableRange() {
-		this.Remove(e)
+	for e := range thatSet.MutableRange() {
+		thisSet.Remove(e)
 	}
 }
 
 /*
-Removes all elements from this Set3 that are in the data array.
+Removes all elements from thisSet that are in the data array.
 
 If data is nil, nothing happens.
 
@@ -702,19 +700,19 @@ Example:
 	set.Add(3)
 	set.RemoveAllFrom([]int{3,4}]) // set will now contain 1, 2
 */
-func (this *Set3[T]) RemoveAllFrom(data []T) {
+func (thisSet *Set3[T]) RemoveAllFrom(data []T) {
 	if data == nil {
 		return
 	}
 	for _, e := range data {
-		this.Remove(e)
+		thisSet.Remove(e)
 	}
 }
 
 /*
-Creates a new Set3 as a mathematical difference between this and that. The result is a new Set3 that contains elements that are in this Set3 but not in that Set3.
+Creates a new Set3 as a mathematical difference between thisSet and thatSet. The result is a new Set3 that contains elements that are in thisSet but not in thatSet.
 
-If that Set3 is nil, Difference returns a clone of this Set3.
+If thatSet is nil, Difference returns a clone of thisSet.
 
 Example:
 
@@ -727,14 +725,14 @@ Example:
 	set2.Add(4)
 	d := set1.Difference(set2) // set1 and set2 are not altered, d will contain 1, 2
 */
-func (this *Set3[T]) Difference(that *Set3[T]) *Set3[T] {
-	if that == nil {
-		return this.Clone()
+func (thisSet *Set3[T]) Difference(thatSet *Set3[T]) *Set3[T] {
+	if thatSet == nil {
+		return thisSet.Clone()
 	}
-	potentialSize := this.Count()
+	potentialSize := thisSet.Count()
 	result := NewSet3WithSize[T](potentialSize)
-	for e := range this.MutableRange() {
-		if !that.Contains(e) {
+	for e := range thisSet.MutableRange() {
+		if !thatSet.Contains(e) {
 			result.Add(e)
 		}
 	}
@@ -742,7 +740,7 @@ func (this *Set3[T]) Difference(that *Set3[T]) *Set3[T] {
 }
 
 /*
-Clear removes all elements from this Set3.
+Clear removes all elements from thisSet.
 
 Example:
 
@@ -751,22 +749,22 @@ Example:
 	set.Add(2)
 	set.Clear()  // set will be empty, Count() will return 0
 */
-func (this *Set3[T]) Clear() {
+func (thisSet *Set3[T]) Clear() {
 	var k T
-	for grpidx := range len(this.group) {
-		d := &(this.group[grpidx])
+	for grpidx := range len(thisSet.group) {
+		d := &(thisSet.group[grpidx])
 		d.ctrl = set3AllEmpty
 		for j := range set3groupSize {
 			d.slot[j] = k
 		}
 	}
-	this.resident, this.dead = 0, 0
+	thisSet.resident, thisSet.dead = 0, 0
 }
 
 /*
 Creates a new Set3 as a mathematical intersection between this and that. The result is a new Set3 that contains elements that are in both sets.
 
-If that Set3 is nil, Intersection returns an empty Set3.
+If thatSet is nil, Intersection returns an empty Set3.
 
 Example:
 
@@ -779,20 +777,20 @@ Example:
 	set2.Add(4)
 	intersect := set1.Intersection(set2) // set1 and set2 are not altered, intersect will contain 3
 */
-func (this *Set3[T]) Intersection(that *Set3[T]) *Set3[T] {
-	if that == nil {
+func (thisSet *Set3[T]) Intersection(thatSet *Set3[T]) *Set3[T] {
+	if thatSet == nil {
 		return NewSet3[T]()
 	}
 
 	var smallerSet *Set3[T]
 	var biggerSet *Set3[T]
 
-	if this.Count() < that.Count() {
-		smallerSet = this
-		biggerSet = that
+	if thisSet.Count() < thatSet.Count() {
+		smallerSet = thisSet
+		biggerSet = thatSet
 	} else {
-		smallerSet = that
-		biggerSet = this
+		smallerSet = thatSet
+		biggerSet = thisSet
 	}
 
 	potentialSize := smallerSet.Count()
@@ -806,7 +804,7 @@ func (this *Set3[T]) Intersection(that *Set3[T]) *Set3[T] {
 }
 
 /*
-Creates a new Set3 as a mathematical intersection between this Set3 and the elements of the data array. The result is a new Set3.
+Creates a new Set3 as a mathematical intersection between thisSet and the elements of the data array. The result is a new Set3.
 
 If data is nil, IntersectionFrom returns an empty Set3.
 
@@ -818,22 +816,22 @@ Example:
 	set.Add(3)
 	intersect := set.IntersectionFrom([]int{3,4}]) // set1 and set2 are not altered, intersect will contain 3
 */
-func (this *Set3[T]) IntersectionFrom(data []T) *Set3[T] {
+func (thisSet *Set3[T]) IntersectionFrom(data []T) *Set3[T] {
 	if data == nil {
 		return NewSet3[T]()
 	}
 
 	var potentialSize uint32
 
-	if this.Count() < uint32(len(data)) {
-		potentialSize = this.Count()
+	if thisSet.Count() < uint32(len(data)) { //nolint:gosec
+		potentialSize = thisSet.Count()
 	} else {
-		potentialSize = uint32(len(data))
+		potentialSize = uint32(len(data)) //nolint:gosec
 	}
 
 	result := NewSet3WithSize[T](potentialSize)
 	for _, e := range data {
-		if this.Contains(e) {
+		if thisSet.Contains(e) {
 			result.Add(e)
 		}
 	}
@@ -841,9 +839,9 @@ func (this *Set3[T]) IntersectionFrom(data []T) *Set3[T] {
 }
 
 /*
-Checks if this Set3 contains any element that is also present in that Set3. This function also provides a quick way to check if two Set3 are disjoint (i.e. !ContainsAny).
+Checks if thisSet contains any element that is also present in thatSet. This function also provides a quick way to check if two Set3 are disjoint (i.e. !ContainsAny).
 
-Returns false if that Set3 is nil.
+Returns false if thatSet is nil.
 
 Example:
 
@@ -856,20 +854,20 @@ Example:
 	set2.Add(1)
 	b := set1.ContainsAny(set2) // b will be true
 */
-func (this *Set3[T]) ContainsAny(that *Set3[T]) bool {
-	if that == nil {
+func (thisSet *Set3[T]) ContainsAny(thatSet *Set3[T]) bool {
+	if thatSet == nil {
 		return false
 	}
 
 	var smallerSet *Set3[T]
 	var biggerSet *Set3[T]
 
-	if this.Count() < that.Count() {
-		smallerSet = this
-		biggerSet = that
+	if thisSet.Count() < thatSet.Count() {
+		smallerSet = thisSet
+		biggerSet = thatSet
 	} else {
-		smallerSet = that
-		biggerSet = this
+		smallerSet = thatSet
+		biggerSet = thisSet
 	}
 
 	for e := range smallerSet.ImmutableRange() {
@@ -881,7 +879,7 @@ func (this *Set3[T]) ContainsAny(that *Set3[T]) bool {
 }
 
 /*
-Checks if this Set3 contains any element fromthe given data array.
+Checks if thisSet contains any element fromthe given data array.
 
 Returns false if data is nil.
 
@@ -893,12 +891,12 @@ Example:
 	set.Add(3)
 	b := set1.ContainsAnyFrom([]int{4, 5, 6}) // b will be false
 */
-func (this *Set3[T]) ContainsAnyFrom(data []T) bool {
+func (thisSet *Set3[T]) ContainsAnyFrom(data []T) bool {
 	if data == nil {
 		return false
 	}
 	for _, d := range data {
-		if this.Contains(d) {
+		if thisSet.Contains(d) {
 			return true
 		}
 	}
@@ -906,7 +904,7 @@ func (this *Set3[T]) ContainsAnyFrom(data []T) bool {
 }
 
 /*
-Count returns the number of elements in this Set3.
+Count returns the number of elements in thisSet.
 
 Example:
 
@@ -916,20 +914,20 @@ Example:
 	set.Add(9)
 	c := set.Count()   // c will be 3
 */
-func (this *Set3[T]) Count() uint32 {
-	return this.resident - this.dead
+func (thisSet *Set3[T]) Count() uint32 {
+	return thisSet.resident - thisSet.dead
 }
 
-func (this *Set3[T]) nextSize() (n uint32) {
-	n = uint32(len(this.group)) * 2
-	if this.dead >= (this.resident / 2) {
-		n = uint32(len(this.group))
+func (thisSet *Set3[T]) nextSize() (n uint32) {
+	n = uint32(len(thisSet.group)) * 2 //nolint:gosec
+	if thisSet.dead >= (thisSet.resident / 2) {
+		n = uint32(len(thisSet.group)) //nolint:gosec
 	}
 	return
 }
 
 /*
-Rorganizes the backend of this Set3 for optimal space efficiency: This call rehashes this Set3 to a size matching its current element count.
+Rorganizes the backend of thisSet for optimal space efficiency: This call rehashes thisSet to a size matching its current element count.
 
 Example:
 
@@ -939,15 +937,15 @@ Example:
 	set.Add(3)
 	set.Rehash() // saves memory consumed by set
 */
-func (this *Set3[T]) Rehash() {
-	numGroups := uint32(calcReqNrOfGroups(this.Count()))
-	this.rehashToNumGroups(numGroups)
+func (thisSet *Set3[T]) Rehash() {
+	numGroups := uint32(calcReqNrOfGroups(thisSet.Count())) //nolint:gosec
+	thisSet.rehashToNumGroups(numGroups)
 }
 
 /*
-Rorganizes the backend of this Set3: RehashTo redistributs the elements of this Set3 onto a new hashset in its backend, e.g., to ensure faster element access.
+Rorganizes the backend of thisSet: RehashTo redistributs the elements of thisSet onto a new hashset in its backend, e.g., to ensure faster element access.
 
-If newSize is smaller than the current number of elements in this Set3, this function does nothing. If newSize is equal to the current number of elements in this Set3, this function does the same as [Rehash].
+If newSize is smaller than the current number of elements in thisSet, this function does nothing. If newSize is equal to the current number of elements in thisSet, this function does the same as [Rehash].
 
 Example:
 
@@ -957,42 +955,42 @@ Example:
 	set.Add(3)
 	set.RehashTo(1000) // ensures that you can add at least 997 more elements to set without rehashing
 */
-func (this *Set3[T]) RehashTo(newSize uint32) {
-	if newSize < this.Count() {
+func (thisSet *Set3[T]) RehashTo(newSize uint32) {
+	if newSize < thisSet.Count() {
 		return
 	}
-	newNumGroups := uint32(calcReqNrOfGroups(newSize))
-	this.rehashToNumGroups(newNumGroups)
+	newNumGroups := uint32(calcReqNrOfGroups(newSize)) //nolint:gosec
+	thisSet.rehashToNumGroups(newNumGroups)
 }
 
-func (this *Set3[T]) rehashToNumGroups(newNumGroups uint32) {
-	old_groups := this.fullCopyGroups()
-	this.hashFunction = maphash.NewSeed(this.hashFunction)
-	this.elementLimit = uint32(float64(newNumGroups) * set3maxAvgGroupLoad)
-	this.resident, this.dead = 0, 0
-	this.group = make([]set3Group[T], newNumGroups)
-	for i := range len(this.group) {
-		this.group[i].ctrl = set3AllEmpty
+func (thisSet *Set3[T]) rehashToNumGroups(newNumGroups uint32) {
+	oldGroups := thisSet.fullCopyGroups()
+	thisSet.hashFunction = maphash.NewSeed(thisSet.hashFunction)
+	thisSet.elementLimit = uint32(float64(newNumGroups) * set3maxAvgGroupLoad)
+	thisSet.resident, thisSet.dead = 0, 0
+	thisSet.group = make([]set3Group[T], newNumGroups)
+	for i := range len(thisSet.group) {
+		thisSet.group[i].ctrl = set3AllEmpty
 	}
-	grpCnt := uint64(len(this.group))
-	for _, old_grp := range old_groups {
-		if old_grp.ctrl&set3hiBits != set3hiBits { // not all empty or deleted
+	grpCnt := uint64(len(thisSet.group))
+	for _, oldGroup := range oldGroups {
+		if oldGroup.ctrl&set3hiBits != set3hiBits { // not all empty or deleted
 			for s := range set3groupSize {
-				if isAnElementAt(old_grp.ctrl, s) {
-					// inlined and reduced Add instead of Set3.Add(old_grp.slot[s])
-					element := old_grp.slot[s]
+				if isAnElementAt(oldGroup.ctrl, s) {
+					// inlined and reduced Add instead of Set3.Add(oldGroup.slot[s])
+					element := oldGroup.slot[s]
 
-					hash := this.hashFunction.Hash(element)
+					hash := thisSet.hashFunction.Hash(element)
 					H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 					H2 := (hash & 0x0000_0000_0000_007f)
-					grpIdx := H1 % uint64(len(this.group))
+					grpIdx := H1 % uint64(len(thisSet.group))
 					stillSearchingSpace := true
 					for stillSearchingSpace {
-						group := &this.group[grpIdx]
+						group := &thisSet.group[grpIdx]
 						ctrl := group.ctrl
 						slot := &(group.slot)
 
-						// optimization: we know it cannot exist in this Set3 already so skip
+						// optimization: we know it cannot exist in thisSet already so skip
 						// searching for the hashcode and start searching for an empty slot
 						// immediately
 						matches := set3ctlrMatchEmpty(ctrl)
@@ -1002,11 +1000,11 @@ func (this *Set3[T]) rehashToNumGroups(newNumGroups uint32) {
 							s := set3nextMatch(&matches)
 							group.ctrl = setCTRLat(ctrl, H2, s)
 							slot[s] = element
-							this.resident++
+							thisSet.resident++
 							stillSearchingSpace = false
 
 						}
-						grpIdx += 1 // carousel through all groups
+						grpIdx++ // carousel through all groups
 						if grpIdx >= grpCnt {
 							grpIdx = 0
 						}

@@ -1,4 +1,4 @@
-package Set3
+package set3
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var rand_ops_config = []struct {
+var randOpsConfig = []struct {
 	numSets int
 	setSize int
 	setVar  int
@@ -39,7 +39,7 @@ func TestRandomOps(t *testing.T) {
 	}
 	defer pprof.StopCPUProfile()
 
-	for _, cfg := range rand_ops_config {
+	for _, cfg := range randOpsConfig {
 		for iterations := 0; iterations < 100; iterations++ {
 			sets := make([]*Set3[uint32], cfg.numSets)
 			// fill all sets
