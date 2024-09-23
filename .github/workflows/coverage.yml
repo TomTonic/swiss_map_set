@@ -31,6 +31,6 @@ jobs:
         with:
           profile: cover.out
           local-prefix: "github.com/TomTonic/Set3"
-          threshold-total: 95
+          threshold-total: 98
           git-branch: badges
           git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
