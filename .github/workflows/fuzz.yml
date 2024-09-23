@@ -1,6 +1,6 @@
 name: Fuzz Tests
-
 on: [push]
+
 permissions:
   contents: read
 
@@ -34,7 +34,6 @@ jobs:
         for file in ${files}
         do
             funcs=$(grep -oP 'func \K(Fuzz\w*)' $file)
-            tag=${{ matrix.tags }}
             for func in ${funcs}
             do
                 echo "Fuzzing $func in $file"

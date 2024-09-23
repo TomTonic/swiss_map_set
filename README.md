@@ -18,17 +18,23 @@ The name "Set3" comes from the fact that this was the 3rd attempt for an optimiz
 To use the `Set3` package in your Go project, follow these steps:
 
 1. **Initialize a Go module** (if you haven't already):
+
    ```sh
    go mod init your-module-name
    ```
+
 2. **Add the package**: Simply import the package in your Go code, and Go modules will handle the rest:
+
    ```go
    import "github.com/TomTonic/Set3"
    ```
+
 3. **Download dependencies**: Run the following command to download the dependencies:
+
    ```sh
    go mod tidy
    ```
+
    This will automatically download and install the Set3 package along with any other dependencies.
 
 ## Using Set3
@@ -37,25 +43,25 @@ The following test case creates two sets and demonstrates some operations. For a
 
 ```go
 func TestExample(t *testing.T) {
-	// create a new Set3
-	set1 := NewSet3[int]()
-	// add some elements
-	set1.Add(1)
-	set1.Add(2)
-	set1.Add(3)
-	// add some more elements from an array
-	set1.AddAllFrom([]int{4, 5, 6})
-	// create a second set directly from an array
-	set2 := AsSet3([]int{2, 3, 4, 5})
-	// check if set2 is a subset of set1. must be true in this case
-	isSubset := set1.ContainsAll(set2)
-	assert.True(t, isSubset, "%v is not a subset of %v", set2, set1)
-	// mathematical operations like Union, Difference and Intersect
-	// do not manipulate a Set3 but return a new set
-	intersect := set1.Intersection(set2)
-	// compare sets. as set2 is a subset of set1, intersect must be equal to set2
-	equal := intersect.Equals(set2)
-	assert.True(t, equal, "%v is not equal to %v", intersect, set2)
+    // create a new Set3
+    set1 := NewSet3[int]()
+    // add some elements
+    set1.Add(1)
+    set1.Add(2)
+    set1.Add(3)
+    // add some more elements from an array
+    set1.AddAllFrom([]int{4, 5, 6})
+    // create a second set directly from an array
+    set2 := AsSet3([]int{2, 3, 4, 5})
+    // check if set2 is a subset of set1. must be true in this case
+    isSubset := set1.ContainsAll(set2)
+    assert.True(t, isSubset, "%v is not a subset of %v", set2, set1)
+    // mathematical operations like Union, Difference and Intersect
+    // do not manipulate a Set3 but return a new set
+    intersect := set1.Intersection(set2)
+    // compare sets. as set2 is a subset of set1, intersect must be equal to set2
+    equal := intersect.Equals(set2)
+    assert.True(t, equal, "%v is not equal to %v", intersect, set2)
 }
 ```
 
@@ -63,9 +69,10 @@ func TestExample(t *testing.T) {
 
 The following benchmarks have been performed with [v0.2.0](https://github.com/TomTonic/Set3/releases/tag/v0.2.0) to compare `Set3[uint32]` with `map[uint32]struct{}` with the command:
 
-```
+```sh
 go test -benchmem -benchtime=6s -timeout 480m -run="^$" -bench "^(BenchmarkSet3Fill|BenchmarkNativeMapFill|BenchmarkSet3Find|BenchmarkNativeMapFind)$" github.com/TomTonic/Set3 > benchresult.txt
 ```
+
 (Raw benchmark results are available [here](https://raw.githubusercontent.com/TomTonic/Set3/main/benchresult.txt). Go version 1.23.1, no PGO.)
 
 ### Inserting Nodes into an Empty Set

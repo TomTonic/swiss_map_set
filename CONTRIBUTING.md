@@ -1,6 +1,6 @@
 # Contributing
 
-(This text is derived from https://github.com/coreinfrastructure/best-practices-badge/blob/main/CONTRIBUTING.md) 
+(This text is derived from the [OSSF Best Practice Badge CONTRIBUTING rules](https://github.com/coreinfrastructure/best-practices-badge/blob/main/CONTRIBUTING.md).)
 
 Feedback and contributions are very welcome! Here’s how you can contribute, divided into the following sections:
 
@@ -69,13 +69,13 @@ inclusion in the project.
 Simply submitting a contribution implies this agreement, however,
 please include a "Signed-off-by" tag in every patch
 (this tag is a conventional way to confirm that you agree to the DCO).
-You can do this with <tt>git commit --signoff</tt> (the <tt>-s</tt> flag
-is a synonym for <tt>--signoff</tt>).
+You can do this with `git commit --signoff` (the `-s` flag
+is a synonym for `--signoff`).
 
 Alternatively, add the following at the end of the commit message, separated
 by a blank line from the body of the commit:
 
-````
+````txt
 Signed-off-by: YOUR NAME <YOUR.EMAIL@EXAMPLE.COM>
 ````
 
@@ -156,14 +156,14 @@ for continuous integration. If problems are found, please fix them.
 
 Follow these guidelines for writing git commit messages:
 
-1.  Separate subject from body with a blank line.
-2.  Limit the subject line to 50 characters (flexible up to 72 characters).
-3.  Capitalize the subject line.
-4.  Do not end the subject line with a period.
-5.  Use the imperative mood in the subject line (*command* form).
-6.  Wrap the body at 72 characters (`fmt -w 72`).
-7.  Use the body to explain what and why, not how
-    (git tracks how it was changed in detail, don't repeat that).
+1. Separate subject from body with a blank line.
+2. Limit the subject line to 50 characters (flexible up to 72 characters).
+3. Capitalize the subject line.
+4. Do not end the subject line with a period.
+5. Use the imperative mood in the subject line (*command* form).
+6. Wrap the body at 72 characters (`fmt -w 72`).
+7. Use the body to explain what and why, not how
+   (git tracks how it was changed in detail, don't repeat that).
 
 ## Reuse (Supply Chain)
 
