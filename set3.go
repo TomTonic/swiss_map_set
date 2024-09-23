@@ -198,7 +198,7 @@ func AsSet3[T comparable](data []T) *Set3[T] {
 	if data == nil {
 		return NewSet3[T]()
 	}
-	result := NewSet3WithSize[T](uint32(len(data)))
+	result := NewSet3WithSize[T](uint32(len(data))) //nolint:gosec
 	for _, e := range data {
 		result.Add(e)
 	}
@@ -258,7 +258,6 @@ func (this *Set3[T]) Contains(element T) bool {
 		ctrl := group.ctrl
 		slot := &(group.slot)
 		matches := set3ctlrMatchH2(ctrl, H2)
-		//matches := simd.MatchCRTLhash(ctrl, H2)
 		for matches != 0 {
 			s := set3nextMatch(&matches)
 			if element == slot[s] {
@@ -268,14 +267,13 @@ func (this *Set3[T]) Contains(element T) bool {
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
 		matches = set3ctlrMatchEmpty(ctrl)
-		//matches = simd.MatchCRTLempty(ctrl)
 		if matches != 0 {
 			// there is an empty slot - the element, if it had been added, hat either
 			// been found until now or it had been added in the next empty spot -
 			// well, this is the next empty spot...
 			return false
 		}
-		grpIdx += 1 // carousel through all groups
+		grpIdx++ // carousel through all groups
 		if grpIdx >= grpCnt {
 			grpIdx = 0
 		}
@@ -497,7 +495,7 @@ func (this *Set3[T]) Add(element T) {
 			return
 
 		}
-		grpIdx += 1 // carousel through all groups
+		grpIdx++ // carousel through all groups
 		if grpIdx >= grpCnt {
 			grpIdx = 0
 		}
@@ -657,7 +655,7 @@ func (this *Set3[T]) Remove(element T) bool {
 			// |element| absent
 			return false
 		}
-		grpIdx += 1 // linear probing
+		grpIdx++ // linear probing
 		if grpIdx >= grpCnt {
 			grpIdx = 0
 		}
@@ -825,10 +823,10 @@ func (this *Set3[T]) IntersectionFrom(data []T) *Set3[T] {
 
 	var potentialSize uint32
 
-	if this.Count() < uint32(len(data)) {
+	if this.Count() < uint32(len(data)) { //nolint:gosec
 		potentialSize = this.Count()
 	} else {
-		potentialSize = uint32(len(data))
+		potentialSize = uint32(len(data)) //nolint:gosec
 	}
 
 	result := NewSet3WithSize[T](potentialSize)
@@ -921,9 +919,9 @@ func (this *Set3[T]) Count() uint32 {
 }
 
 func (this *Set3[T]) nextSize() (n uint32) {
-	n = uint32(len(this.group)) * 2
+	n = uint32(len(this.group)) * 2 //nolint:gosec
 	if this.dead >= (this.resident / 2) {
-		n = uint32(len(this.group))
+		n = uint32(len(this.group)) //nolint:gosec
 	}
 	return
 }
@@ -975,12 +973,12 @@ func (this *Set3[T]) rehashToNumGroups(newNumGroups uint32) {
 		this.group[i].ctrl = set3AllEmpty
 	}
 	grpCnt := uint64(len(this.group))
-	for _, old_grp := range old_groups {
-		if old_grp.ctrl&set3hiBits != set3hiBits { // not all empty or deleted
+	for _, oldGroup := range old_groups {
+		if oldGroup.ctrl&set3hiBits != set3hiBits { // not all empty or deleted
 			for s := range set3groupSize {
-				if isAnElementAt(old_grp.ctrl, s) {
-					// inlined and reduced Add instead of Set3.Add(old_grp.slot[s])
-					element := old_grp.slot[s]
+				if isAnElementAt(oldGroup.ctrl, s) {
+					// inlined and reduced Add instead of Set3.Add(oldGroup.slot[s])
+					element := oldGroup.slot[s]
 
 					hash := this.hashFunction.Hash(element)
 					H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
@@ -1006,7 +1004,7 @@ func (this *Set3[T]) rehashToNumGroups(newNumGroups uint32) {
 							stillSearchingSpace = false
 
 						}
-						grpIdx += 1 // carousel through all groups
+						grpIdx++ // carousel through all groups
 						if grpIdx >= grpCnt {
 							grpIdx = 0
 						}

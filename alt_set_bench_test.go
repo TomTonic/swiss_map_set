@@ -403,7 +403,7 @@ func BenchmarkSet3Find(b *testing.B) {
 				x = 0
 				for _, e := range searchElements {
 					if resultSet.Contains(e) {
-						x += 1
+						x++
 					}
 				}
 			}
@@ -430,12 +430,12 @@ func BenchmarkNativeMapFind(b *testing.B) {
 				for _, e := range searchElements {
 					_, b := resultSet[e]
 					if b {
-						x += 1
+						x++
 					}
 				}
 			}
 		})
-		//println(x)
+		// println(x)
 	}
 }
 /*

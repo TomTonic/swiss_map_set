@@ -378,7 +378,8 @@ func TestImmutableRange(t *testing.T) {
 
 func TestEquals(t *testing.T) {
 	set1 := NewSet3WithSize[int](10)
-	if !set1.Equals(set1) {
+	sameptr := set1
+	if !set1.Equals(sameptr) {
 		t.Errorf("Test case 1: Both sets are the same instance: Expected true, got false")
 	}
 
@@ -694,8 +695,8 @@ func TestToArray(t *testing.T) {
 	set := AsSet3([]int{1, 2, 2, 3})
 	ary := set.ToArray()
 	assert.True(t, len(ary) == 3, "the array shall contain 3 elements")
-	new_set := AsSet3(ary)
-	assert.True(t, set.Equals(new_set), "both sets shall contain the same 3 elements")
+	newSet := AsSet3(ary)
+	assert.True(t, set.Equals(newSet), "both sets shall contain the same 3 elements")
 	empty := NewSet3[int]()
 	ary = empty.ToArray()
 	assert.True(t, len(ary) == 0, "the array shall contain 0 elements")
