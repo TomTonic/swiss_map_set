@@ -62,7 +62,7 @@ func TestMemoryFootprintSet(t *testing.T) {
 	for n := 10; n <= 350_000; n += 20 {
 		b1 := testing.Benchmark(func(b *testing.B) {
 			// max load factor 6.66666/8
-			m := NewSet3WithSize[int](uint32(n))
+			m := EmptyWithCapacity[int](uint32(n))
 			require.NotNil(b, m)
 		})
 		b2 := testing.Benchmark(func(b *testing.B) {
@@ -101,7 +101,7 @@ func benchmarkSwissSet[K comparable](b *testing.B, keys []K) {
 	n := uint32(len(keys))
 	mod := n - 1 // power of 2 fast modulus
 	require.Equal(b, 1, bits.OnesCount32(n))
-	m := NewSet3WithSize[K](n)
+	m := EmptyWithCapacity[K](n)
 	b.ResetTimer()
 	for _, k := range keys {
 		m.Add(k)
