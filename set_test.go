@@ -915,19 +915,19 @@ func TestSet3ContainsAnyFromArray(t *testing.T) {
 
 func TestContainsAnyOf(t *testing.T) {
 	// Test case 1: Contains one of the elements
-	set := From(1,2,3)
+	set := From(1, 2, 3)
 	if !set.ContainsAnyOf(2, 4) {
 		t.Errorf("ContainsAnyOf failed to return true for element 2")
 	}
 
 	// Test case 2: Does not contain any of the elements
-	set = From(1,2)
+	set = From(1, 2)
 	if set.ContainsAnyOf(3, 4) {
 		t.Errorf("ContainsAnyOf incorrectly returned true for elements 3 and 4")
 	}
 
 	// Test case 3: Contains all of the elements
-	set = From(1,2)
+	set = From(1, 2)
 	if !set.ContainsAnyOf(1, 2) {
 		t.Errorf("ContainsAnyOf failed to return true for elements 1 and 2")
 	}
