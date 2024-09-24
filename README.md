@@ -45,25 +45,25 @@ The following test case creates two sets and demonstrates some operations. For a
 
 ```go
 func TestExample(t *testing.T) {
-    // create a new Set3
-    set1 := NewSet3[int]()
-    // add some elements
-    set1.Add(1)
-    set1.Add(2)
-    set1.Add(3)
-    // add some more elements from an array
-    set1.AddAllFrom([]int{4, 5, 6})
-    // create a second set directly from an array
-    set2 := AsSet3([]int{2, 3, 4, 5})
-    // check if set2 is a subset of set1. must be true in this case
-    isSubset := set1.ContainsAll(set2)
-    assert.True(t, isSubset, "%v is not a subset of %v", set2, set1)
-    // mathematical operations like Union, Difference and Intersect
-    // do not manipulate a Set3 but return a new set
-    intersect := set1.Intersection(set2)
-    // compare sets. as set2 is a subset of set1, intersect must be equal to set2
-    equal := intersect.Equals(set2)
-    assert.True(t, equal, "%v is not equal to %v", intersect, set2)
+   // create a new Set3
+   set1 := Empty[int]()
+   // add some elements
+   set1.Add(1)
+   set1.Add(2)
+   set1.Add(3)
+   // add some more elements
+   set1.AddAllOf(4, 5, 6)
+   // create a second set directly from an array
+   set2 := FromArray([]int{2, 3, 4, 5})
+   // check if set2 is a subset of set1. must be true in this case
+   isSubset := set1.ContainsAll(set2)
+   assert.True(t, isSubset, "%v is not a subset of %v", set2, set1)
+   // mathematical operations like Unite, Subtract and Intersect
+   // do not manipulate a Set3 but return a new set
+   intersect := set1.Intersect(set2)
+   // compare sets. as set2 is a subset of set1, intersect must be equal to set2
+   equal := intersect.Equals(set2)
+   assert.True(t, equal, "%v is not equal to %v", intersect, set2)
 }
 ```
 
