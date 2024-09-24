@@ -16,366 +16,438 @@ package set3
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"runtime"
 	"testing"
 	"time"
 )
 
-type testMapType map[uint32]struct{}
+type testMapType map[uint64]struct{}
 
-func prepareDataUint32(setSize, searchListSize int, minimalHitRatio float32, seed int64) (setValues []uint32, searchElements []uint32) {
-	rng := rand.New(rand.NewSource(seed))
-	setValues = make([]uint32, setSize)
-	for n := 0; n < setSize; n++ {
-		element := rng.Uint32()
-		setValues[n] = element
+// see https://en.wikipedia.org/wiki/Xorshift#xorshift*
+// This PRNG is deterministic and has a period of 2^64-1. This way we can ensure, we always get a new 'random' number, that is unknown to the set.
+type prngState uint64
+func (thisState *prngState) Uint64() uint64 {
+	x := *thisState
+    x ^= x >> 12
+    x ^= x << 25
+    x ^= x >> 27
+	*thisState = x
+	return uint64(x) * 0x2545F4914F6CDD1D
+}
+
+func (thisState *prngState) Uint32() uint32 {
+	x := thisState.Uint64()
+	x >>= 32 // the upper 32 bit have better 'randomness', see https://en.wikipedia.org/wiki/Xorshift#xorshift*
+	return uint32(x)
+}
+
+type searchDataDriver struct {
+	rng *prngState
+	setValues []uint64
+	hitRatio float64
+}
+
+func newSearchDataDriver(setSize int, targetHitRatio float32, seed int64) *searchDataDriver {
+	s := prngState(seed)
+	vals := uniqueRandomNumbers(setSize, &s)
+	result := &searchDataDriver{
+		rng: &s,
+		setValues: shuffleArray(vals, rand.New(rand.NewSource(seed)), 3),
+		hitRatio: float64(targetHitRatio),
 	}
-	nrOfElemToCopy := int(minimalHitRatio * float32(searchListSize))
-	tempList := make([]uint32, searchListSize)
-	countCopied := 0
-	for countCopied < nrOfElemToCopy {
-		for i, e := range setValues {
-			tempList[i] = e
-			countCopied++
-			if countCopied >= nrOfElemToCopy {
-				break
-			}
+	return result
+}
+
+// tis function is designed in a way that both paths - table lookup and random number generation only are about equaly fast/slow
+func (thisCfg *searchDataDriver) nextSearchValue() uint64 {
+	x := uint64(float64(math.MaxUint64) * thisCfg.hitRatio)
+	rndVal := thisCfg.rng.Uint64()
+	upper32 := uint32(rndVal>>32)
+	idx := upper32 % uint32(len(thisCfg.setValues))
+	tableVal := thisCfg.setValues[idx]
+	var result uint64
+	if thisCfg.rng.Uint64() < x {
+		// this shall be a hit
+		result = rndVal ^ tableVal ^ rndVal // use both values to make both paths equally slow/fast
+	} else {
+		// this shall be a miss
+		result = tableVal ^ rndVal ^ tableVal // use both values to make both paths equally slow/fast
+	}
+	return result
+}
+
+func uniqueRandomNumbers(setSize int, rng *prngState) []uint64 {
+	tmpSet := EmptyWithCapacity[uint64](2 * uint32(setSize))
+	for tmpSet.Count() < uint32(setSize) {
+		tmpSet.Add(rng.Uint64())
+	}
+	result := tmpSet.ToArray()
+	return result
+}
+
+func shuffleArray(input []uint64, rng *rand.Rand, rounds int) (output []uint64) {
+	a := input
+	b := make([]uint64, len(input))
+	for i := 0; i<rounds; i++ {
+		perm := rng.Perm(len(input))
+		for j := 0; j<len(input); j++ {
+			b[j] = a[perm[j]];
 		}
+		temp := a
+		a = b
+		b = temp
 	}
-	for i := countCopied; i < searchListSize; i++ {
-		element := rng.Uint32()
-		tempList[i] = element
-	}
-	perm := rng.Perm(searchListSize)
-	searchElements = make([]uint32, searchListSize)
-	for i, idx := range perm {
-		searchElements[i] = tempList[idx]
-	}
+	output = a
 	return
 }
 
 var config = []struct {
-	inintialSetSize int
+	initSetSize int
 	finalSetSize    int
-	searchListSize  int
-	minimalHitRatio float32
+	targetHitRatio  float32
 	seed            int64
 }{
-	{inintialSetSize: 21, finalSetSize: 1, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 2, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 3, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 4, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 5, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 6, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 7, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 8, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 9, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 10, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 11, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 12, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 13, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 14, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 15, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 16, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 17, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 18, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 19, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 20, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 21, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 22, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 23, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 24, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 25, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 26, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 27, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 28, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 29, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 30, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 31, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 32, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 33, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 34, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 35, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 36, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 37, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 38, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 39, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 40, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 41, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 42, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 43, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 44, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 45, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 46, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 47, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 48, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 49, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 50, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 51, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 52, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 53, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 54, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 55, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 56, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 57, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 58, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 59, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 60, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 61, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 62, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 63, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 64, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 65, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 66, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 67, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 68, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 69, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 70, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 71, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 72, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 73, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 74, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 75, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 76, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 77, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 78, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 79, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 80, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 81, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 82, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 83, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 84, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 85, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 86, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 87, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 88, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 89, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 90, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 91, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 92, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 93, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 94, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 95, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 96, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 97, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 98, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 99, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 100, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 101, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 102, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 103, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 104, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 105, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 106, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 107, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 108, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 109, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 110, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 111, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 112, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 113, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 114, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 115, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 116, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 117, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 118, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 119, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 120, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 121, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 122, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 123, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 124, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 125, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 126, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 127, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 128, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 129, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 130, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 131, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 132, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 133, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 134, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 135, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 136, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 137, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 138, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 139, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 140, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 141, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 142, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 143, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 144, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 145, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 146, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 147, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 148, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 149, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 150, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 151, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 152, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 153, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 154, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 155, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 156, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 157, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 158, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 159, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 160, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 161, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 162, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 163, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 164, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 165, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 166, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 167, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 168, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 169, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 170, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 171, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 172, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 173, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 174, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 175, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 176, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 177, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 178, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 179, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 180, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 181, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 182, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 183, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 184, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 185, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 186, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 187, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 188, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 189, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 190, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 191, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 192, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 193, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 194, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 195, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 196, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 197, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 198, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 199, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 200, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 201, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 202, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 203, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 204, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 205, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 206, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 207, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 208, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 209, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 210, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 211, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 212, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 213, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 214, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 215, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 216, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 217, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 218, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 219, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 220, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 221, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 222, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 223, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 224, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 225, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 226, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 227, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 228, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 229, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 230, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 231, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 232, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 233, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 234, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 235, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 236, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 237, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 238, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 239, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 240, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 241, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 242, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 243, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 244, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 245, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 246, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 247, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 248, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 249, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 250, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 251, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 252, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 253, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 254, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 255, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 256, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 257, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 258, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 259, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 260, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 261, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 262, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 263, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 264, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 265, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 266, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 267, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 268, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 269, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 270, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 271, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 272, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 273, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 274, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 275, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 276, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 277, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 278, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 279, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 280, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 281, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 282, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 283, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 284, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 285, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 286, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 287, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 288, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 289, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 290, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 291, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 292, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 293, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 294, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 295, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 296, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 297, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 298, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 299, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-	{inintialSetSize: 21, finalSetSize: 300, searchListSize: 5000, minimalHitRatio: 0.3, seed: 0x1234567890ABCDEF},
-}
+	{initSetSize: 21, finalSetSize: 10, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 20, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 30, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 40, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 50, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+/*	{initSetSize: 21, finalSetSize: 6, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 7, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 8, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 9, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 10, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 11, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 12, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 13, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 14, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 15, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 16, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 17, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 18, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 19, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 20, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 21, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 22, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 23, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 24, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 25, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 26, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 27, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 28, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 29, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 30, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 31, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 32, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 33, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 34, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 35, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 36, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 37, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 38, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 39, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 40, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 41, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 42, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 43, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 44, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 45, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 46, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 47, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 48, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 49, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 50, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 51, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 52, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 53, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 54, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 55, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 56, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 57, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 58, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 59, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 60, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 61, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 62, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 63, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 64, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 65, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 66, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 67, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 68, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 69, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 70, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 71, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 72, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 73, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 74, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 75, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 76, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 77, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 78, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 79, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 80, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 81, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 82, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 83, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 84, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 85, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 86, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 87, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 88, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 89, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 90, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 91, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 92, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 93, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 94, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 95, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 96, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 97, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 98, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 99, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 100, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 101, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 102, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 103, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 104, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 105, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 106, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 107, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 108, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 109, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 110, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 111, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 112, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 113, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 114, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 115, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 116, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 117, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 118, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 119, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 120, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 121, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 122, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 123, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 124, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 125, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 126, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 127, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 128, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 129, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 130, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 131, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 132, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 133, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 134, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 135, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 136, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 137, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 138, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 139, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 140, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 141, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 142, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 143, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 144, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 145, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 146, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 147, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 148, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 149, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 150, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 151, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 152, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 153, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 154, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 155, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 156, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 157, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 158, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 159, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 160, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 161, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 162, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 163, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 164, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 165, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 166, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 167, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 168, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 169, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 170, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 171, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 172, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 173, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 174, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 175, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 176, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 177, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 178, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 179, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 180, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 181, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 182, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 183, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 184, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 185, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 186, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 187, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 188, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 189, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 190, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 191, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 192, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 193, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 194, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 195, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 196, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 197, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 198, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 199, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 200, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 201, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 202, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 203, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 204, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 205, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 206, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 207, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 208, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 209, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 210, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 211, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 212, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 213, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 214, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 215, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 216, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 217, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 218, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 219, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 220, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 221, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 222, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 223, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 224, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 225, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 226, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 227, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 228, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 229, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 230, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 231, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 232, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 233, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 234, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 235, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 236, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 237, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 238, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 239, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 240, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 241, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 242, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 243, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 244, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 245, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 246, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 247, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 248, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 249, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 250, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 251, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 252, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 253, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 254, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 255, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 256, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 257, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 258, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 259, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 260, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 261, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 262, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 263, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 264, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 265, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 266, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 267, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 268, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 269, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 270, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 271, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 272, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 273, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 274, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 275, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 276, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 277, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 278, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 279, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 280, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 281, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 282, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 283, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 284, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 285, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 286, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 287, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 288, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 289, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 290, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 291, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 292, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 293, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 294, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 295, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 296, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 297, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 298, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 299, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+	{initSetSize: 21, finalSetSize: 300, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF},
+*/}
 
-func BenchmarkSet3Fill(b *testing.B) {
+func BenchmarkSearchDataDriver(b *testing.B) {
+	b.Skip("unskip to benchmark nextSearchValue paths")
 	for _, cfg := range config {
-		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
+		sdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed)
 		// Force garbage collection
 		runtime.GC()
 		// Give the garbage collector some time to complete
 		time.Sleep(1 * time.Second)
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		var x uint64 = 0
+		sdd.hitRatio = 0.0
+		b.Run(fmt.Sprintf("setSize(%d);hit(%f)", len(sdd.setValues), sdd.hitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				resultSet := EmptyWithCapacity[uint32](uint32(cfg.inintialSetSize))
-				for j := 0; j < len(setValues); j++ {
-					resultSet.Add(setValues[j])
+				x ^= sdd.nextSearchValue()
+			}
+		})
+		sdd.hitRatio = 1.0
+		b.Run(fmt.Sprintf("setSize(%d);hit(%f)", len(sdd.setValues), sdd.hitRatio), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				x ^= sdd.nextSearchValue()
+			}
+		})
+		// println(x)
+	}
+}
+
+func BenchmarkSet3Fill(b *testing.B) {
+	for _, cfg := range config {
+		sdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed)
+		// Force garbage collection
+		runtime.GC()
+		// Give the garbage collector some time to complete
+		time.Sleep(1 * time.Second)
+		b.Run(fmt.Sprintf("init(%d);final(%d);hit(%f)", cfg.initSetSize, cfg.finalSetSize, cfg.targetHitRatio), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				resultSet := EmptyWithCapacity[uint64](uint32(cfg.initSetSize))
+				for j := 0; j < len(sdd.setValues); j++ {
+					resultSet.Add(sdd.setValues[j])
 				}
 			}
 		})
@@ -384,16 +456,16 @@ func BenchmarkSet3Fill(b *testing.B) {
 
 func BenchmarkNativeMapFill(b *testing.B) {
 	for _, cfg := range config {
-		setValues, _ := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
+		sdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed)
 		// Force garbage collection
 		runtime.GC()
 		// Give the garbage collector some time to complete
 		time.Sleep(1 * time.Second)
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("init(%d);final(%d);hit(%f)", cfg.initSetSize, cfg.finalSetSize, cfg.targetHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				resultSet := make(testMapType, cfg.inintialSetSize)
-				for j := 0; j < len(setValues); j++ {
-					resultSet[setValues[j]] = struct{}{}
+				resultSet := make(testMapType, cfg.initSetSize)
+				for j := 0; j < len(sdd.setValues); j++ {
+					resultSet[sdd.setValues[j]] = struct{}{}
 				}
 			}
 		})
@@ -402,83 +474,52 @@ func BenchmarkNativeMapFill(b *testing.B) {
 
 func BenchmarkSet3Find(b *testing.B) {
 	for _, cfg := range config {
-		setValues, searchElements := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		resultSet := FromArray(setValues)
-		// Force garbage collection
-		runtime.GC()
-		// Give the garbage collector some time to complete
-		time.Sleep(1 * time.Second)
-		var x uint64
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", len(setValues), cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				x = 0
-				for _, e := range searchElements {
-					if resultSet.Contains(e) {
-						x++
+		for round := 0; round < 5 ; round ++ {
+			sdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+int64(round))
+			resultSet := FromArray(sdd.setValues)
+			// Force garbage collection
+			runtime.GC()
+			// Give the garbage collector some time to complete
+			time.Sleep(1 * time.Second)
+			var hit uint64 = 0
+			var total uint64 = 0
+			b.Run(fmt.Sprintf("init(%d);final(%d);hit(%f)", len(sdd.setValues), cfg.finalSetSize, cfg.targetHitRatio), func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					search := sdd.nextSearchValue()
+					if resultSet.Contains(search) {
+						hit++
 					}
+					total++
 				}
-			}
-		})
-		// println(x)
+			})
+			b.Logf("Actual hit ratio: %.3f", float32(hit)/float32(total))
+		}
 	}
 }
 
 func BenchmarkNativeMapFind(b *testing.B) {
 	for _, cfg := range config {
-		setValues, searchElements := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		resultSet := make(testMapType, len(setValues))
-		for j := 0; j < len(setValues); j++ {
-			resultSet[setValues[j]] = struct{}{}
+		sdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed)
+		resultSet := make(testMapType, len(sdd.setValues))
+		for j := 0; j < len(sdd.setValues); j++ {
+			resultSet[sdd.setValues[j]] = struct{}{}
 		}
 		// Force garbage collection
 		runtime.GC()
 		// Give the garbage collector some time to complete
 		time.Sleep(1 * time.Second)
-		var x uint64
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", len(setValues), cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		var hit uint64 = 0
+		var total uint64 = 0
+		b.Run(fmt.Sprintf("init(%d);final(%d);hit(%f)", len(sdd.setValues), cfg.finalSetSize, cfg.targetHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				x = 0
-				for _, e := range searchElements {
-					_, b := resultSet[e]
-					if b {
-						x++
-					}
+				search := sdd.nextSearchValue()
+				_, b := resultSet[search]
+				if b {
+					hit++
 				}
+				total++
 			}
 		})
-		// println(x)
+		b.Logf("Actual hit ratio: %.3f", float32(hit)/float32(total))
 	}
 }
-
-/*
-func myGenStringData(size, count int) (result []string) {
-	src := rand.New(rand.NewSource(int64(size * count)))
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	r := make([]rune, size*count)
-	for i := range r {
-		r[i] = letters[src.Intn(len(letters))]
-	}
-	result = make([]string, count)
-	for i := range result {
-		result[i] = string(r[:size])
-		r = r[size:]
-	}
-	return
-}
-
-func myGenUint32Data(count int) (result []uint32) {
-	result = make([]uint32, count)
-	for i := range result {
-		result[i] = rand.Uint32()
-	}
-	return
-}
-
-func myGenerateInt64Data(n int) (data []int64) {
-	data = make([]int64, n)
-	for i := range data {
-		data[i] = rand.Int63()
-	}
-	return
-}
-*/
