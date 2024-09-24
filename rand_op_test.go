@@ -39,7 +39,7 @@ var randOpsConfig = []struct {
 }
 
 func TestRandomOps(t *testing.T) {
-	t.Skip("unskip for cpu profiling - runs 0.5-1 minutes")
+	//t.Skip("unskip for cpu profiling - runs 0.5-1 minutes")
 	// Start profiling
 	f, err := os.Create("cpu.prof")
 	if err != nil {
@@ -54,7 +54,7 @@ func TestRandomOps(t *testing.T) {
 	defer pprof.StopCPUProfile()
 
 	for _, cfg := range randOpsConfig {
-		for iterations := 0; iterations < 100; iterations++ {
+		for iterations := 0; iterations < 200; iterations++ {
 			sets := make([]*Set3[uint32], cfg.numSets)
 			// fill all sets
 			for i := 0; i < cfg.numSets; i++ {
@@ -67,11 +67,13 @@ func TestRandomOps(t *testing.T) {
 			// delete some elements
 			for i := 0; i < cfg.numSets/3; i++ {
 				idx := rand.Intn(cfg.numSets)
+				sets[idx].AddAllFromArray([]uint32{rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod),
+					rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod)})
 				for i := 0; i < cfg.mod*2; i++ {
 					sets[idx].Remove(rand.Uint32() % uint32(cfg.mod))
 				}
-				sets[idx].AddAllFromArray([]uint32{rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod),
-					rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod)})
+				sets[idx].AddAllOf(rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod),
+					rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod))
 			}
 			// delete some sets completely
 			for i := 0; i < cfg.numSets/4; i++ {
@@ -94,8 +96,13 @@ func TestRandomOps(t *testing.T) {
 				superset.AddAll(sets[i])
 			}
 
+			bingo := false
+			doh := false
+
 			for i := 0; i < cfg.numSets; i++ {
 				intersect := superset.Intersect(sets[i])
+				bingo = sets[i].ContainsAllOf(rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod)) || bingo
+				doh = sets[i].ContainsAnyOf(rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod)) || doh
 				equal := intersect.Equals(sets[i])
 				stringIntersect := intersect.String()
 				stringSet := sets[i].String()

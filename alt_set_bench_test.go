@@ -29,23 +29,23 @@ func prepareDataUint32(setSize, searchListSize int, minimalHitRatio float32, see
 	setValues = make([]uint32, setSize)
 	for n := 0; n < setSize; n++ {
 		element := rng.Uint32()
-		setValues = append(setValues, element)
+		setValues[n] = element
 	}
 	nrOfElemToCopy := int(minimalHitRatio * float32(searchListSize))
-	tempList := make([]uint32, 0, searchListSize)
+	tempList := make([]uint32, searchListSize)
 	countCopied := 0
 	for countCopied < nrOfElemToCopy {
-		for _, e := range setValues {
-			tempList = append(tempList, e)
+		for i, e := range setValues {
+			tempList[i] = e
 			countCopied++
 			if countCopied >= nrOfElemToCopy {
 				break
 			}
 		}
 	}
-	for n := countCopied; n < searchListSize; n++ {
+	for i := countCopied; i < searchListSize; i++ {
 		element := rng.Uint32()
-		tempList = append(tempList, element)
+		tempList[i] = element
 	}
 	perm := rng.Perm(searchListSize)
 	searchElements = make([]uint32, searchListSize)
@@ -403,16 +403,13 @@ func BenchmarkNativeMapFill(b *testing.B) {
 func BenchmarkSet3Find(b *testing.B) {
 	for _, cfg := range config {
 		setValues, searchElements := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		resultSet := EmptyWithCapacity[uint32](uint32(cfg.inintialSetSize))
-		for j := 0; j < len(setValues); j++ {
-			resultSet.Add(setValues[j])
-		}
+		resultSet := FromArray(setValues)
 		// Force garbage collection
 		runtime.GC()
 		// Give the garbage collector some time to complete
 		time.Sleep(1 * time.Second)
 		var x uint64
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", len(setValues), cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				x = 0
 				for _, e := range searchElements {
@@ -429,7 +426,7 @@ func BenchmarkSet3Find(b *testing.B) {
 func BenchmarkNativeMapFind(b *testing.B) {
 	for _, cfg := range config {
 		setValues, searchElements := prepareDataUint32(cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio, cfg.seed)
-		resultSet := make(testMapType, cfg.inintialSetSize)
+		resultSet := make(testMapType, len(setValues))
 		for j := 0; j < len(setValues); j++ {
 			resultSet[setValues[j]] = struct{}{}
 		}
@@ -438,7 +435,7 @@ func BenchmarkNativeMapFind(b *testing.B) {
 		// Give the garbage collector some time to complete
 		time.Sleep(1 * time.Second)
 		var x uint64
-		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", cfg.inintialSetSize, cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
+		b.Run(fmt.Sprintf("inintial(%d);final(%d);search(%d);hit(%f)", len(setValues), cfg.finalSetSize, cfg.searchListSize, cfg.minimalHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				x = 0
 				for _, e := range searchElements {
