@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSet3(t *testing.T) {
+func TestSet3VariousSizes(t *testing.T) {
 	t.Run("strings=0", func(t *testing.T) {
 		testSet3(t, genStringData(16, 0))
 	})
@@ -225,7 +225,7 @@ func testSetGrow[K comparable](t *testing.T, keys []K) {
 	}
 }
 
-func TestMutableRange(t *testing.T) {
+func TestSet3MutableRange(t *testing.T) {
 	tests := []struct {
 		name     string
 		set      Set3[int]
@@ -289,7 +289,7 @@ func TestMutableRange(t *testing.T) {
 	}
 }
 
-func TestMutableRangeTwice(t *testing.T) {
+func TestSet3MutableRangeTwice(t *testing.T) {
 	set := FromArray[string]([]string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"})
 	strary := make([]string, set.Count())
 
@@ -308,7 +308,7 @@ func TestMutableRangeTwice(t *testing.T) {
 
 }
 
-func TestImmutableRange(t *testing.T) {
+func TestSet3ImmutableRange(t *testing.T) {
 	tests := []struct {
 		name     string
 		set      Set3[int]
@@ -376,7 +376,7 @@ func TestImmutableRange(t *testing.T) {
 	}
 }
 
-func TestEquals(t *testing.T) {
+func TestSet3Equals(t *testing.T) {
 	set1 := EmptyWithCapacity[int](10)
 	sameptr := set1
 	if !set1.Equals(sameptr) {
@@ -413,7 +413,7 @@ func TestEquals(t *testing.T) {
 	}
 }
 
-func TestAsSet3(t *testing.T) {
+func TestSet3FromArray(t *testing.T) {
 	empty := Empty[int]()
 	s1 := FromArray([]int{})
 	eq := empty.Equals(s1)
@@ -424,6 +424,21 @@ func TestAsSet3(t *testing.T) {
 	assert.Equal(t, eq, true)
 	s1.Add(2)
 	s3 := FromArray([]int{2, 1})
+	eq = s1.Equals(s3)
+	assert.Equal(t, eq, true)
+}
+
+func TestSet3From(t *testing.T) {
+	empty := Empty[int]()
+	s1 := From[int]()
+	eq := empty.Equals(s1)
+	assert.Equal(t, eq, true)
+	s1.Add(1)
+	s2 := From(1)
+	eq = s1.Equals(s2)
+	assert.Equal(t, eq, true)
+	s1.Add(2)
+	s3 := From(2, 1)
 	eq = s1.Equals(s3)
 	assert.Equal(t, eq, true)
 }
@@ -537,7 +552,7 @@ func TestSet3ContainsAll(t *testing.T) {
 	assert.False(t, set1.ContainsAll(set5), "set5 shall not be a subset of set1")
 }
 
-func TestSet3ContainsAllFrom(t *testing.T) {
+func TestSet3ContainsAllFromArray(t *testing.T) {
 	set1 := FromArray([]int{1, 2, 3})
 	assert.True(t, set1.ContainsAllFromArray([]int{1, 2}), "[]int{1,2} shall be a subset of set1")
 	assert.True(t, set1.ContainsAllFromArray([]int{2}), "[]int{2} shall be a subset of set1")
@@ -549,7 +564,20 @@ func TestSet3ContainsAllFrom(t *testing.T) {
 	assert.False(t, set1.ContainsAllFromArray([]int{4}), "[]int{4} shall be a subset of set1")
 }
 
-func TestSet3Union(t *testing.T) {
+func TestSet3ContainsAllOf(t *testing.T) {
+	set1 := FromArray([]int{1, 2, 3})
+	assert.True(t, set1.ContainsAllOf(1, 2), "1,2 shall be a subset of set1")
+	assert.True(t, set1.ContainsAllOf(2), "2 shall be a subset of set1")
+	assert.True(t, set1.ContainsAllOf(), "no args shall be a subset of set1")
+	assert.True(t, set1.ContainsAllOf(nil...), "nil shall be a subset of set1")
+	empty := Empty[int]()
+	assert.True(t, empty.ContainsAllOf(), "[]int{} shall be a subset of empty")
+	assert.True(t, set1.ContainsAllOf(2, 2, 2, 2, 2, 2), "[]int{2,2,2,2,2,2} shall be a subset of set1")
+	assert.False(t, set1.ContainsAllOf(2, 4), "[]int{2,4} shall be a subset of set1")
+	assert.False(t, set1.ContainsAllOf(4), "[]int{4} shall be a subset of set1")
+}
+
+func TestSet3Unite(t *testing.T) {
 	set1 := FromArray([]int{1, 2, 3})
 	set2 := FromArray([]int{4, 5, 6})
 	set3 := FromArray([]int{1, 2, 3, 4, 5, 6})
@@ -582,7 +610,7 @@ func TestSet3AddAll(t *testing.T) {
 	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
 }
 
-func TestSet3AddAllFrom(t *testing.T) {
+func TestSet3AddAllFromArray(t *testing.T) {
 	set1 := FromArray([]int{1, 2, 3})
 	set3 := FromArray([]int{1, 2, 3, 4, 5, 6})
 	set1.AddAllFromArray([]int{4, 5, 6})
@@ -593,7 +621,20 @@ func TestSet3AddAllFrom(t *testing.T) {
 	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
 }
 
-func TestSet3Intersection(t *testing.T) {
+func TestSet3AddAllOf(t *testing.T) {
+	set1 := FromArray([]int{1, 2, 3})
+	set3 := FromArray([]int{1, 2, 3, 4, 5, 6})
+	set1.AddAllOf(4, 5, 6)
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.AddAllOf()
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.AddAllOf(nil...)
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+	set1.AddAllOf(4, 5, 6)
+	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
+}
+
+func TestSet3Intersect(t *testing.T) {
 	set1 := FromArray([]int{1, 2, 3, 4})
 	clone := set1.Clone()
 	set2 := FromArray([]int{3, 4, 5, 6})
@@ -614,7 +655,7 @@ func TestSet3Intersection(t *testing.T) {
 	assert.True(t, empty.Equals(i4), "empty shall be equal to i4")
 }
 
-func TestSet3IntersectionFrom(t *testing.T) {
+func TestSet3IntersectWithArray(t *testing.T) {
 	set1 := FromArray([]int{1, 2, 3, 4})
 	clone := set1.Clone()
 	set3 := FromArray([]int{3, 4})
@@ -646,7 +687,7 @@ func TestSet3RemoveAll(t *testing.T) {
 	assert.True(t, set1.Equals(empty), "set1 and empty shall be equal")
 }
 
-func TestSet3RemoveAllFrom(t *testing.T) {
+func TestSet3RemoveAllFromArray(t *testing.T) {
 	set1 := FromArray([]int{1, 2, 3, 4, 5, 6})
 	set3 := FromArray([]int{1, 2, 3, 4})
 	set1.RemoveAllFromArray([]int{5, 6, 7, 8})
@@ -657,7 +698,7 @@ func TestSet3RemoveAllFrom(t *testing.T) {
 	assert.True(t, set1.Equals(set3), "set1 and set3 shall be equal")
 }
 
-func TestSet3Difference(t *testing.T) {
+func TestSet3Subtract(t *testing.T) {
 	set1 := FromArray([]int{1, 2, 3, 4})
 	set2 := FromArray([]int{3, 4, 5, 6})
 	set3 := FromArray([]int{1, 2})
@@ -670,7 +711,7 @@ func TestSet3Difference(t *testing.T) {
 	assert.True(t, set1.Equals(i2), "set1 shall be equal to i2")
 }
 
-func TestRehash(t *testing.T) {
+func TestSet3Rehash(t *testing.T) {
 	data := genUint32Data(53)
 	set := FromArray(data)
 	assert.True(t, len(set.group) == 9, "set shall contain 9 groups")
@@ -691,7 +732,7 @@ func TestRehash(t *testing.T) {
 	}
 }
 
-func TestToArray(t *testing.T) {
+func TestSet3ToArray(t *testing.T) {
 	set := FromArray([]int{1, 2, 2, 3})
 	ary := set.ToArray()
 	assert.True(t, len(ary) == 3, "the array shall contain 3 elements")
@@ -709,14 +750,14 @@ func TestExample(t *testing.T) {
 	set1.Add(1)
 	set1.Add(2)
 	set1.Add(3)
-	// add some more elements from an array
-	set1.AddAllFromArray([]int{4, 5, 6})
+	// add some more elements
+	set1.AddAllOf(4, 5, 6)
 	// create a second set directly from an array
 	set2 := FromArray([]int{2, 3, 4, 5})
 	// check if set2 is a subset of set1. must be true in this case
 	isSubset := set1.ContainsAll(set2)
 	assert.True(t, isSubset, "%v is not a subset of %v", set2, set1)
-	// mathematical operations like Union, Difference and Intersect
+	// mathematical operations like Unite, Subtract and Intersect
 	// do not manipulate a Set3 but return a new set
 	intersect := set1.Intersect(set2)
 	// compare sets. as set2 is a subset of set1, intersect must be equal to set2
@@ -780,7 +821,7 @@ func TestNil(t *testing.T) {
 	assert.True(t, s == "{nil}", "value shall be '{nil}'")
 }
 
-func TestContainsAny(t *testing.T) {
+func TestSet3ContainsAny(t *testing.T) {
 	tests := []struct {
 		name     string
 		thisSet  *Set3[int]
@@ -829,7 +870,7 @@ func TestContainsAny(t *testing.T) {
 	}
 }
 
-func TestContainsAnyFrom(t *testing.T) {
+func TestSet3ContainsAnyFromArray(t *testing.T) {
 	tests := []struct {
 		name     string
 		set      *Set3[int]
@@ -869,5 +910,83 @@ func TestContainsAnyFrom(t *testing.T) {
 				t.Errorf("ContainsAnyFrom() = %v, expected %v", result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestContainsAnyOf(t *testing.T) {
+	// Test case 1: Contains one of the elements
+	set := From(1,2,3)
+	if !set.ContainsAnyOf(2, 4) {
+		t.Errorf("ContainsAnyOf failed to return true for element 2")
+	}
+
+	// Test case 2: Does not contain any of the elements
+	set = From(1,2)
+	if set.ContainsAnyOf(3, 4) {
+		t.Errorf("ContainsAnyOf incorrectly returned true for elements 3 and 4")
+	}
+
+	// Test case 3: Contains all of the elements
+	set = From(1,2)
+	if !set.ContainsAnyOf(1, 2) {
+		t.Errorf("ContainsAnyOf failed to return true for elements 1 and 2")
+	}
+
+	// Test case 4: Empty set
+	set = Empty[int]()
+	if set.ContainsAnyOf(1, 2) {
+		t.Errorf("ContainsAnyOf incorrectly returned true for an empty set")
+	}
+
+	// Test case 5: No arguments
+	set = From(1)
+	if set.ContainsAnyOf() {
+		t.Errorf("ContainsAnyOf incorrectly returned true with no arguments")
+	}
+
+	// Test case 6: Nil arguments
+	set = From(1)
+	if set.ContainsAnyOf(nil...) {
+		t.Errorf("ContainsAnyOf incorrectly returned true with nil arguments")
+	}
+}
+
+func TestRemoveAllOf(t *testing.T) {
+	// Test case 1: Remove multiple elements
+	set := From(1, 2, 3)
+	set.RemoveAllOf(1, 2)
+	if set.Contains(1) || set.Contains(2) {
+		t.Errorf("RemoveAllOf failed to remove elements 1 and 2")
+	}
+	if !set.Contains(3) {
+		t.Errorf("RemoveAllOf incorrectly removed element 3")
+	}
+
+	// Test case 2: Remove elements not in the set
+	set = From(1)
+	set.RemoveAllOf(2, 3)
+	if !set.Contains(1) {
+		t.Errorf("RemoveAllOf incorrectly removed element 1")
+	}
+
+	// Test case 3: Remove from an empty set
+	set = Empty[int]()
+	set.RemoveAllOf(1, 2)
+	if set.Count() != 0 {
+		t.Errorf("RemoveAllOf failed on empty set")
+	}
+
+	// Test case 4: Remove with no arguments
+	set = From(1)
+	set.RemoveAllOf()
+	if !set.Contains(1) {
+		t.Errorf("RemoveAllOf incorrectly removed element 1 with no arguments")
+	}
+
+	// Test case 5: Remove with nil arguments
+	set = From(1)
+	set.RemoveAllOf(nil...)
+	if !set.Contains(1) {
+		t.Errorf("RemoveAllOf incorrectly removed element 1 with nil arguments")
 	}
 }
