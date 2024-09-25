@@ -159,7 +159,7 @@ func From[T comparable](args ...T) *Set3[T] {
 	if args == nil {
 		return Empty[T]()
 	}
-	result := EmptyWithCapacity[T](uint32(len(args))) //nolint:gosec
+	result := EmptyWithCapacity[T](uint32(len(args) * 7 / 5)) //nolint:gosec
 	for _, e := range args {
 		result.Add(e)
 	}
@@ -183,7 +183,7 @@ func FromArray[T comparable](data []T) *Set3[T] {
 	if data == nil {
 		return Empty[T]()
 	}
-	result := EmptyWithCapacity[T](uint32(len(data))) //nolint:gosec
+	result := EmptyWithCapacity[T](uint32(len(data) * 7 / 5)) //nolint:gosec
 	for _, e := range data {
 		result.Add(e)
 	}
@@ -231,10 +231,9 @@ Example:
 */
 func (thisSet *Set3[T]) Contains(element T) bool {
 	hash := thisSet.hashFunction.Hash(element)
-	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
 	groupCount := uint64(len(thisSet.group_ctrl))
-	currentGroupIndex := H1 % groupCount
+	currentGroupIndex := getGroupIndex(hash, groupCount)
 	for {
 		ctrl := thisSet.group_ctrl[currentGroupIndex]
 		H2matches := set3ctlrMatchH2(ctrl, H2)
@@ -261,6 +260,13 @@ func (thisSet *Set3[T]) Contains(element T) bool {
 			currentGroupIndex = 0
 		}
 	}
+}
+
+func getGroupIndex(hash, groupCount uint64) uint64 {
+	// H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
+	// return H1 % groupCount
+	H1 := (hash & 0x0000_007f_ffff_ff80) >> 7 // this impl uses Lemire's fast alternative to the modulo reduction, so adapt constant
+	return (H1 * groupCount) >> 32
 }
 
 /*
@@ -474,10 +480,9 @@ func (thisSet *Set3[T]) Add(element T) {
 		thisSet.rehashToNumGroups(thisSet.nextSize())
 	}
 	hash := thisSet.hashFunction.Hash(element)
-	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
 	groupCount := uint64(len(thisSet.group_ctrl))
-	currentGroupIndex := H1 % groupCount
+	currentGroupIndex := getGroupIndex(hash, groupCount)
 	for {
 		ctrl := thisSet.group_ctrl[currentGroupIndex]
 		H2matches := set3ctlrMatchH2(ctrl, H2)
@@ -637,10 +642,9 @@ Example:
 */
 func (thisSet *Set3[T]) Remove(element T) bool {
 	hash := thisSet.hashFunction.Hash(element)
-	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
 	groupCount := uint64(len(thisSet.group_ctrl))
-	currentGroupIndex := H1 % groupCount
+	currentGroupIndex := getGroupIndex(hash, groupCount)
 	for {
 		ctrl := thisSet.group_ctrl[currentGroupIndex]
 		H2matches := set3ctlrMatchH2(ctrl, H2)
@@ -1066,9 +1070,8 @@ func (thisSet *Set3[T]) rehashToNumGroups(newNumGroups uint32) {
 
 					// inlined and optimized Add implementation instead of Set3.Add(oldGroup.slot[s])
 					hash := thisSet.hashFunction.Hash(elementToAdd)
-					H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 					H2 := (hash & 0x0000_0000_0000_007f)
-					grpIdx := H1 % uint64(newNumGroups)
+					grpIdx := getGroupIndex(hash, uint64(newNumGroups))
 					stillSearchingSpace := true
 					for stillSearchingSpace {
 						// optimization: we know it cannot be in thisSet yet so skip
