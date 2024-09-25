@@ -25,8 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testMapType map[uint64]struct{}
-
 // see https://en.wikipedia.org/wiki/Xorshift#xorshift*
 // This PRNG is deterministic and has a period of 2^64-1. This way we can ensure, we always get a new 'random' number, that is unknown to the set.
 type prngState struct {
@@ -366,9 +364,9 @@ func BenchmarkNativeMapFill(b *testing.B) {
 		time.Sleep(1 * time.Second)
 		b.Run(fmt.Sprintf("init(%d);final(%d);hit(%f)", cfg.initSetSize, cfg.finalSetSize, cfg.targetHitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				resultSet := make(testMapType, cfg.initSetSize)
+				resultSet := emptyNativeWithCapacity[uint64](uint32(cfg.initSetSize))
 				for j := 0; j < len(sdd.setValues); j++ {
-					resultSet[sdd.setValues[j]] = struct{}{}
+					resultSet.add(sdd.setValues[j])
 				}
 			}
 		})
@@ -427,16 +425,16 @@ func TestSet3Find(t *testing.T) {
 			var total uint64 = 0
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			currentSet := FromArray(currentSdd.setValues)
-			// testdata := make([]uint64, 100_000_001) // i.e. b.N limit + 1 probe
-			// for j := range 100_000_001 {
-			//	testdata[j] = currentSdd.nextSearchValue()
-			// }
-			// currentSdd = nil
+			testdata := make([]uint64, 250_000_001) // i.e. b.N limit + 1 probe
+			for j := range 250_000_001 {
+				testdata[j] = currentSdd.nextSearchValue()
+			}
+			currentSdd = nil
 			runtime.GC()
 			benchres[i] = testing.Benchmark(func(b *testing.B) {
 				for j := 0; j < b.N; j++ {
-					search := currentSdd.nextSearchValue()
-					// search := testdata[j]
+					// search := currentSdd.nextSearchValue()
+					search := testdata[j]
 					if currentSet.Contains(search) {
 						hit++
 					}
@@ -463,22 +461,21 @@ func TestNativeMapFind(t *testing.T) {
 			var hit uint64 = 0
 			var total uint64 = 0
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
-			currentSet := make(testMapType, len(currentSdd.setValues))
+			currentSet := emptyNativeWithCapacity[uint64](uint32(len(currentSdd.setValues)))
 			for j := 0; j < len(currentSdd.setValues); j++ {
-				currentSet[currentSdd.setValues[j]] = struct{}{}
+				currentSet.add(currentSdd.setValues[j])
 			}
-			// testdata := make([]uint64, 250_000_001) // i.e. b.N limit + 1 probe
-			// for j := range 250_000_001 {
-			//	testdata[j] = currentSdd.nextSearchValue()
-			// }
-			// currentSdd = nil
+			testdata := make([]uint64, 250_000_001) // i.e. b.N limit + 1 probe
+			for j := range 250_000_001 {
+				testdata[j] = currentSdd.nextSearchValue()
+			}
+			currentSdd = nil
 			runtime.GC()
 			benchres[i] = testing.Benchmark(func(b *testing.B) {
 				for j := 0; j < b.N; j++ {
-					search := currentSdd.nextSearchValue()
-					// search := testdata[j]
-					_, b := currentSet[search]
-					if b {
+					// search := currentSdd.nextSearchValue()
+					search := testdata[j]
+					if currentSet.contains(search) {
 						hit++
 					}
 					total++
