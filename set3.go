@@ -55,54 +55,14 @@ func set3hasZeroByte(x uint64) uint64 {
 	return ((x - set3loBits) & ^(x)) & set3hiBits
 }
 
-type set3Group[T comparable] struct {
-	ctrl uint64
-	slot [set3groupSize]T
-}
-
-var set3hextable = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}
-
-func (thisSet *set3Group[T]) String() string {
-	var builder strings.Builder
-	var mask uint64 = 0xFF
-	shr := 0
-	builder.WriteString("[")
-	for i := range set3groupSize {
-		b := thisSet.ctrl & mask
-		b >>= shr
-		mask <<= 8
-		shr += 8
-		switch b {
-		case set3Empty:
-			builder.WriteString("__")
-		case set3Deleted:
-			builder.WriteString("XX")
-		default:
-			builder.WriteString(set3hextable[b>>4])
-			builder.WriteString(set3hextable[b&0x0f])
-		}
-		if i < set3groupSize-1 {
-			builder.WriteString("|")
-		}
-	}
-	builder.WriteString("]->{")
-	for i, v := range thisSet.slot {
-		builder.WriteString(fmt.Sprintf("%v", v))
-		if i < set3groupSize-1 {
-			builder.WriteString("|")
-		}
-	}
-	builder.WriteString("}")
-	return builder.String()
-}
-
 // Set3 is a hash set of type K.
 type Set3[T comparable] struct {
 	hashFunction maphash.Hasher[T]
 	resident     uint32
 	dead         uint32
 	elementLimit uint32
-	group        []set3Group[T]
+	group_ctrl   []uint64
+	group_slot   [][set3groupSize]T
 }
 
 /*
@@ -165,10 +125,11 @@ func EmptyWithCapacity[T comparable](initialCapacity uint32) *Set3[T] {
 	result := &Set3[T]{
 		hashFunction: maphash.NewHasher[T](),
 		elementLimit: uint32(float64(reqNrOfGroups) * set3maxAvgGroupLoad),
-		group:        make([]set3Group[T], reqNrOfGroups),
+		group_ctrl:   make([]uint64, reqNrOfGroups),
+		group_slot:   make([][set3groupSize]T, reqNrOfGroups),
 	}
-	for i := range len(result.group) {
-		result.group[i].ctrl = set3AllEmpty
+	for i := range reqNrOfGroups {
+		result.group_ctrl[i] = set3AllEmpty
 	}
 	return result
 }
@@ -248,14 +209,11 @@ func (thisSet *Set3[T]) Clone() *Set3[T] {
 		elementLimit: thisSet.elementLimit,
 		resident:     thisSet.resident,
 		dead:         thisSet.dead,
-		group:        thisSet.fullCopyGroups(),
+		group_ctrl:   make([]uint64, len(thisSet.group_ctrl)),
+		group_slot:   make([][set3groupSize]T, len(thisSet.group_slot)),
 	}
-	return result
-}
-
-func (thisSet *Set3[T]) fullCopyGroups() []set3Group[T] {
-	result := make([]set3Group[T], len(thisSet.group))
-	copy(result, thisSet.group)
+	copy(result.group_ctrl, thisSet.group_ctrl)
+	copy(result.group_slot, thisSet.group_slot)
 	return result
 }
 
@@ -275,31 +233,32 @@ func (thisSet *Set3[T]) Contains(element T) bool {
 	hash := thisSet.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpCnt := uint64(len(thisSet.group))
-	grpIdx := H1 % grpCnt
+	groupCount := uint64(len(thisSet.group_ctrl))
+	currentGroupIndex := H1 % groupCount
 	for {
-		group := &thisSet.group[grpIdx]
-		ctrl := group.ctrl
-		slot := &(group.slot)
-		matches := set3ctlrMatchH2(ctrl, H2)
-		for matches != 0 {
-			s := set3nextMatch(&matches)
-			if element == slot[s] {
-				return true
+		ctrl := thisSet.group_ctrl[currentGroupIndex]
+		H2matches := set3ctlrMatchH2(ctrl, H2)
+		if H2matches != 0 {
+			slot := &(thisSet.group_slot[currentGroupIndex])
+			for H2matches != 0 {
+				s := set3nextMatch(&H2matches)
+				if element == slot[s] {
+					return true
+				}
 			}
 		}
 		// |key| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = set3ctlrMatchEmpty(ctrl)
-		if matches != 0 {
+		emptyMatches := set3ctlrMatchEmpty(ctrl)
+		if emptyMatches != 0 {
 			// there is an empty slot - the element, if it had been added, hat either
 			// been found until now or it had been added in the next empty spot -
 			// well, this is the next empty spot...
 			return false
 		}
-		grpIdx++ // carousel through all groups
-		if grpIdx >= grpCnt {
-			grpIdx = 0
+		currentGroupIndex++ // carousel through all groups
+		if currentGroupIndex >= groupCount {
+			currentGroupIndex = 0
 		}
 	}
 }
@@ -435,10 +394,9 @@ Example:
 */
 func (thisSet *Set3[T]) MutableRange() iter.Seq[T] {
 	return func(yield func(T) bool) {
-		for _, group := range thisSet.group {
-			ctrl := group.ctrl
+		for i, ctrl := range thisSet.group_ctrl {
 			if ctrl&set3hiBits != set3hiBits { // not all empty or deleted
-				slot := &(group.slot)
+				slot := &(thisSet.group_slot[i])
 				for i := 0; i < set3groupSize; i++ {
 					if isAnElementAt(ctrl, i) {
 						if !yield(slot[i]) {
@@ -464,11 +422,13 @@ Example:
 */
 func (thisSet *Set3[T]) ImmutableRange() iter.Seq[T] {
 	return func(yield func(T) bool) {
-		groups := thisSet.fullCopyGroups()
-		for _, group := range groups {
-			ctrl := group.ctrl
+		group_ctrl := make([]uint64, len(thisSet.group_ctrl))
+		group_slot := make([][set3groupSize]T, len(thisSet.group_slot))
+		copy(group_ctrl, thisSet.group_ctrl)
+		copy(group_slot, thisSet.group_slot)
+		for i, ctrl := range group_ctrl {
 			if ctrl&set3hiBits != set3hiBits { // not all empty or deleted
-				slot := &(group.slot)
+				slot := &(group_slot[i])
 				for i := 0; i < set3groupSize; i++ {
 					if isAnElementAt(ctrl, i) {
 						if !yield(slot[i]) {
@@ -516,38 +476,38 @@ func (thisSet *Set3[T]) Add(element T) {
 	hash := thisSet.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpCnt := uint64(len(thisSet.group))
-	grpIdx := H1 % grpCnt
+	groupCount := uint64(len(thisSet.group_ctrl))
+	currentGroupIndex := H1 % groupCount
 	for {
-		group := &thisSet.group[grpIdx]
-		ctrl := group.ctrl
-		slot := &(group.slot)
-
-		matches := set3ctlrMatchH2(ctrl, H2)
-		for matches != 0 {
-			s := set3nextMatch(&matches)
-			if element == slot[s] {
-				// found - already in Set3, just return
-				return
+		ctrl := thisSet.group_ctrl[currentGroupIndex]
+		H2matches := set3ctlrMatchH2(ctrl, H2)
+		if H2matches != 0 {
+			slot := &(thisSet.group_slot[currentGroupIndex])
+			for H2matches != 0 {
+				s := set3nextMatch(&H2matches)
+				if element == slot[s] {
+					// found - already in Set3, just return
+					return
+				}
 			}
 		}
 
 		// element is not in group,
 		// stop probing if we see an empty slot
-		matches = set3ctlrMatchEmpty(ctrl)
+		emptyMatches := set3ctlrMatchEmpty(ctrl)
 
-		if matches != 0 {
+		if emptyMatches != 0 {
 			// empty spot -> element can't be in Set3 (see Contains) -> insert
-			s := set3nextMatch(&matches)
-			group.ctrl = setCTRLat(ctrl, H2, s)
-			slot[s] = element
+			s := set3nextMatch(&emptyMatches)
+			thisSet.group_ctrl[currentGroupIndex] = setCTRLat(ctrl, H2, s)
+			thisSet.group_slot[currentGroupIndex][s] = element
 			thisSet.resident++
 			return
 
 		}
-		grpIdx++ // carousel through all groups
-		if grpIdx >= grpCnt {
-			grpIdx = 0
+		currentGroupIndex++ // carousel through all groups
+		if currentGroupIndex >= groupCount {
+			currentGroupIndex = 0
 		}
 	}
 }
@@ -679,56 +639,57 @@ func (thisSet *Set3[T]) Remove(element T) bool {
 	hash := thisSet.hashFunction.Hash(element)
 	H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 	H2 := (hash & 0x0000_0000_0000_007f)
-	grpCnt := uint64(len(thisSet.group))
-	grpIdx := H1 % grpCnt
+	groupCount := uint64(len(thisSet.group_ctrl))
+	currentGroupIndex := H1 % groupCount
 	for {
-		group := &thisSet.group[grpIdx]
-		ctrl := group.ctrl
-		slot := &(group.slot)
-		matches := set3ctlrMatchH2(ctrl, H2)
-		for matches != 0 {
-			s := set3nextMatch(&matches)
-			if element == slot[s] {
-				// found - already in Set3, just return
-				// optimization: if |m.ctrl[g]| contains any empty
-				// metadata bytes, we can physically delete |element|
-				// rather than placing a tombstone.
-				// The observation is that any probes into group |g|
-				// would already be terminated by the existing empty
-				// slot, and therefore reclaiming slot |s| will not
-				// cause premature termination of probes into |g|.
-				if set3ctlrMatchEmpty(ctrl) != 0 {
-					group.ctrl = setCTRLat(ctrl, set3Empty, s)
-					thisSet.resident--
-				} else {
-					group.ctrl = setCTRLat(ctrl, set3Deleted, s)
-					thisSet.dead++
-					/*
-						// unfortunately, this is an invalid optimization, as the algorithm might stop searching for elements to early.
-						// if they spilled over in the next group, we unfortunately need all the tumbstones...
-						if group.ctrl == set3AllDeleted {
-							group.ctrl = set3AllEmpty
-							thisSet.dead -= set3groupSize
-							thisSet.resident -= set3groupSize
-						}
-					*/
+		ctrl := thisSet.group_ctrl[currentGroupIndex]
+		H2matches := set3ctlrMatchH2(ctrl, H2)
+		if H2matches != 0 {
+			slot := &(thisSet.group_slot[currentGroupIndex])
+			for H2matches != 0 {
+				s := set3nextMatch(&H2matches)
+				if element == slot[s] {
+					// found - already in Set3, just return
+					// optimization: if |m.ctrl[g]| contains any empty
+					// metadata bytes, we can physically delete |element|
+					// rather than placing a tombstone.
+					// The observation is that any probes into group |g|
+					// would already be terminated by the existing empty
+					// slot, and therefore reclaiming slot |s| will not
+					// cause premature termination of probes into |g|.
+					if set3ctlrMatchEmpty(ctrl) != 0 {
+						thisSet.group_ctrl[currentGroupIndex] = setCTRLat(ctrl, set3Empty, s)
+						thisSet.resident--
+					} else {
+						thisSet.group_ctrl[currentGroupIndex] = setCTRLat(ctrl, set3Deleted, s)
+						thisSet.dead++
+						/*
+							// unfortunately, this is an invalid optimization, as the algorithm might stop searching for elements to early.
+							// if they spilled over in the next group, we unfortunately need all the tumbstones...
+							if group.ctrl == set3AllDeleted {
+								group.ctrl = set3AllEmpty
+								thisSet.dead -= set3groupSize
+								thisSet.resident -= set3groupSize
+							}
+						*/
+					}
+					var k T
+					thisSet.group_slot[currentGroupIndex][s] = k
+					return true
 				}
-				var k T
-				slot[s] = k
-				return true
 			}
 		}
 
 		// |element| is not in group |g|,
 		// stop probing if we see an empty slot
-		matches = set3ctlrMatchEmpty(ctrl)
-		if matches != 0 {
+		emptyMatches := set3ctlrMatchEmpty(ctrl)
+		if emptyMatches != 0 {
 			// |element| absent
 			return false
 		}
-		grpIdx++ // linear probing
-		if grpIdx >= grpCnt {
-			grpIdx = 0
+		currentGroupIndex++ // linear probing
+		if currentGroupIndex >= groupCount {
+			currentGroupIndex = 0
 		}
 	}
 }
@@ -844,11 +805,10 @@ Example:
 */
 func (thisSet *Set3[T]) Clear() {
 	var k T
-	for grpidx := range len(thisSet.group) {
-		d := &(thisSet.group[grpidx])
-		d.ctrl = set3AllEmpty
+	for grpidx := range len(thisSet.group_ctrl) {
+		thisSet.group_ctrl[grpidx] = set3AllEmpty
 		for j := range set3groupSize {
-			d.slot[j] = k
+			thisSet.group_slot[grpidx][j] = k
 		}
 	}
 	thisSet.resident, thisSet.dead = 0, 0
@@ -1037,9 +997,9 @@ func (thisSet *Set3[T]) Count() uint32 {
 }
 
 func (thisSet *Set3[T]) nextSize() (n uint32) {
-	n = uint32(len(thisSet.group)) * 2 //nolint:gosec
+	n = uint32(len(thisSet.group_ctrl)) * 2 //nolint:gosec
 	if thisSet.dead >= (thisSet.resident / 2) {
-		n = uint32(len(thisSet.group)) //nolint:gosec
+		n = uint32(len(thisSet.group_ctrl)) //nolint:gosec
 	}
 	return
 }
@@ -1082,45 +1042,47 @@ func (thisSet *Set3[T]) RehashTo(newSize uint32) {
 }
 
 func (thisSet *Set3[T]) rehashToNumGroups(newNumGroups uint32) {
-	oldGroups := thisSet.fullCopyGroups()
+	oldNumGroups := len(thisSet.group_ctrl)
+	old_group_ctrl := make([]uint64, oldNumGroups)
+	old_group_slot := make([][set3groupSize]T, oldNumGroups)
+	copy(old_group_ctrl, thisSet.group_ctrl)
+	copy(old_group_slot, thisSet.group_slot)
+
 	thisSet.hashFunction = maphash.NewSeed(thisSet.hashFunction)
 	thisSet.elementLimit = uint32(float64(newNumGroups) * set3maxAvgGroupLoad)
 	thisSet.resident, thisSet.dead = 0, 0
-	thisSet.group = make([]set3Group[T], newNumGroups)
-	for i := range len(thisSet.group) {
-		thisSet.group[i].ctrl = set3AllEmpty
+	thisSet.group_ctrl = make([]uint64, newNumGroups)
+	thisSet.group_slot = make([][set3groupSize]T, newNumGroups)
+	for i := range newNumGroups {
+		thisSet.group_ctrl[i] = set3AllEmpty
 	}
-	grpCnt := uint64(len(thisSet.group))
-	for _, oldGroup := range oldGroups {
-		if oldGroup.ctrl&set3hiBits != set3hiBits { // not all empty or deleted
+	grpCnt := uint64(newNumGroups)
+	for oldGroupIndex := 0; oldGroupIndex < oldNumGroups; oldGroupIndex++ {
+		ctrl := old_group_ctrl[oldGroupIndex]
+		if ctrl&set3hiBits != set3hiBits { // not all positions empty or deleted
 			for s := range set3groupSize {
-				if isAnElementAt(oldGroup.ctrl, s) {
-					// inlined and reduced Add instead of Set3.Add(oldGroup.slot[s])
-					element := oldGroup.slot[s]
+				if isAnElementAt(ctrl, s) {
+					elementToAdd := old_group_slot[oldGroupIndex][s]
 
-					hash := thisSet.hashFunction.Hash(element)
+					// inlined and optimized Add implementation instead of Set3.Add(oldGroup.slot[s])
+					hash := thisSet.hashFunction.Hash(elementToAdd)
 					H1 := (hash & 0xffff_ffff_ffff_ff80) >> 7
 					H2 := (hash & 0x0000_0000_0000_007f)
-					grpIdx := H1 % uint64(len(thisSet.group))
+					grpIdx := H1 % uint64(newNumGroups)
 					stillSearchingSpace := true
 					for stillSearchingSpace {
-						group := &thisSet.group[grpIdx]
-						ctrl := group.ctrl
-						slot := &(group.slot)
-
-						// optimization: we know it cannot exist in thisSet already so skip
+						// optimization: we know it cannot be in thisSet yet so skip
 						// searching for the hashcode and start searching for an empty slot
 						// immediately
-						matches := set3ctlrMatchEmpty(ctrl)
+						matches := set3ctlrMatchEmpty(thisSet.group_ctrl[grpIdx])
 
 						if matches != 0 {
 							// empty spot -> element can't be in Set3 (see Contains) -> insert
 							s := set3nextMatch(&matches)
-							group.ctrl = setCTRLat(ctrl, H2, s)
-							slot[s] = element
+							thisSet.group_ctrl[grpIdx] = setCTRLat(thisSet.group_ctrl[grpIdx], H2, s)
+							thisSet.group_slot[grpIdx][s] = elementToAdd
 							thisSet.resident++
 							stillSearchingSpace = false
-
 						}
 						grpIdx++ // carousel through all groups
 						if grpIdx >= grpCnt {
