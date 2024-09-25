@@ -114,110 +114,109 @@ var config = []struct {
 	finalSetSize   int
 	targetHitRatio float64
 	seed           uint64
+	itersPerRound  int
 	rounds         int
 }{
-	{initSetSize: 21, finalSetSize: 1, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
-	{initSetSize: 21, finalSetSize: 10, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
-	{initSetSize: 21, finalSetSize: 100, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
-	/*{initSetSize: 21, finalSetSize: 1000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
-	/*			{initSetSize: 21, finalSetSize: 40, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 50, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 6, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 7, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 8, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 9, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 10, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 11, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 12, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 13, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 14, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 15, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 16, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 17, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 18, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 19, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 20, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 21, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 22, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 23, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 24, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 25, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 26, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 27, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 28, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 29, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 30, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 31, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 32, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 33, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 34, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 35, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 36, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 37, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 38, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 39, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 40, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 41, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 42, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 43, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 44, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 45, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 46, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 47, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 48, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 49, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 50, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 51, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 52, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 53, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 54, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 55, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 56, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 57, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 58, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 59, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 60, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 61, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 62, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 63, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 64, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 65, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 66, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 67, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 68, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 69, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 70, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 71, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 72, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 73, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 74, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 75, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 76, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 77, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 78, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 79, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 80, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 81, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 82, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 83, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 84, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 85, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 86, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 87, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 88, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 89, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 90, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 91, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 92, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 93, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 94, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 95, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 96, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 97, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 98, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 99, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 100, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-	*/
+	{initSetSize: 21, finalSetSize: 1, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 2, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 3, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 4, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 5, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 6, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 7, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 8, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 9, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 10, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 11, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 12, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 13, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 14, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 15, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 16, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 17, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 18, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 19, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 20, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 21, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 22, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 23, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 24, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 25, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 26, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 27, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 28, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 29, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 30, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 31, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 32, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 33, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 34, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 35, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 36, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 37, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 38, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 39, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 40, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 41, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 42, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 43, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 44, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 45, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 46, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 47, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 48, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 49, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 50, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 51, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 52, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 53, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 54, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 55, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 56, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 57, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 58, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 59, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 60, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 61, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 62, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 63, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 64, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 65, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 66, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 67, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 68, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 69, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 70, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 71, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 72, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 73, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 74, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 75, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 76, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 77, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 78, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 79, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 80, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 81, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 82, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 83, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 84, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 85, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 86, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 87, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 88, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 89, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 90, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 91, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 92, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 93, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 94, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 95, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 96, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 97, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 98, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 99, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 100, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRound: 10_000_000, rounds: 11},
 }
 
 func TestPrngSeqLength(t *testing.T) {
@@ -416,78 +415,70 @@ func median(data []float64) float64 {
 }
 
 func TestSet3Find(t *testing.T) {
+	fmt.Printf("Impl;Operation;init;size;hit_target;total_iter;hit_rea;time/iter[ns]\n")
 	for _, cfg := range config {
-		benchres := make([]testing.BenchmarkResult, cfg.rounds)
 		timePerIter := make([]float64, cfg.rounds)
-		fmt.Printf("Impl;Operation;init;size;hit_target;run;total_iter;hit_rea;time/iter[ns];mem/iter[byte];alloc/iter\n")
+		var hit uint64 = 0
+		var total uint64 = 0
 		for i := 0; i < cfg.rounds; i++ {
-			var hit uint64 = 0
-			var total uint64 = 0
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			currentSet := FromArray(currentSdd.setValues)
-			testdata := make([]uint64, 250_000_001) // i.e. b.N limit + 1 probe
-			for j := range 250_000_001 {
+			testdata := make([]uint64, cfg.itersPerRound)
+			for j := range cfg.itersPerRound {
 				testdata[j] = currentSdd.nextSearchValue()
 			}
 			currentSdd = nil
 			runtime.GC()
-			benchres[i] = testing.Benchmark(func(b *testing.B) {
-				for j := 0; j < b.N; j++ {
-					// search := currentSdd.nextSearchValue()
-					search := testdata[j]
-					if currentSet.Contains(search) {
-						hit++
-					}
-					total++
+			startTime := time.Now().UnixNano()
+			for j := 0; j < cfg.itersPerRound; j++ {
+				// search := currentSdd.nextSearchValue()
+				search := testdata[j]
+				if currentSet.Contains(search) {
+					hit++
 				}
-			})
-			hitRea := float32(hit) / float32(total)
-			timePerIter[i] = float64(benchres[i].T) / float64(benchres[i].N)
-			memPerIter := float64(benchres[i].MemBytes) / float64(benchres[i].N)
-			allocPerIter := float64(benchres[i].MemAllocs) / float64(benchres[i].N)
-			fmt.Printf("Set3;Contains;%d;%d;%.3f;%d;%d;%.3f;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, i, benchres[i].N, hitRea, timePerIter[i], memPerIter, allocPerIter)
+				total++
+			}
+			endTime := time.Now().UnixNano()
+			timePerIter[i] = float64(endTime-startTime) / float64(cfg.itersPerRound)
 		}
+		hitRea := float32(hit) / float32(total)
 		med := median(timePerIter)
-		fmt.Printf("Median time: %.3fns/iteration\n", med)
+		fmt.Printf("Set3;Contains;%d;%d;%.3f;%d;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRound, hitRea, med)
 	}
 }
 
 func TestNativeMapFind(t *testing.T) {
+	fmt.Printf("Impl;Operation;init;size;hit_target;total_iter;hit_rea;time/iter[ns]\n")
 	for _, cfg := range config {
-		benchres := make([]testing.BenchmarkResult, cfg.rounds)
 		timePerIter := make([]float64, cfg.rounds)
-		fmt.Printf("Impl;Operation;init;size;hit_target;run;total_iter;hit_rea;time/iter[ns];mem/iter[byte];alloc/iter\n")
+		var hit uint64 = 0
+		var total uint64 = 0
 		for i := 0; i < cfg.rounds; i++ {
-			var hit uint64 = 0
-			var total uint64 = 0
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			currentSet := emptyNativeWithCapacity[uint64](uint32(len(currentSdd.setValues)))
 			for j := 0; j < len(currentSdd.setValues); j++ {
 				currentSet.add(currentSdd.setValues[j])
 			}
-			testdata := make([]uint64, 250_000_001) // i.e. b.N limit + 1 probe
-			for j := range 250_000_001 {
+			testdata := make([]uint64, cfg.itersPerRound)
+			for j := range cfg.itersPerRound {
 				testdata[j] = currentSdd.nextSearchValue()
 			}
 			currentSdd = nil
 			runtime.GC()
-			benchres[i] = testing.Benchmark(func(b *testing.B) {
-				for j := 0; j < b.N; j++ {
-					// search := currentSdd.nextSearchValue()
-					search := testdata[j]
-					if currentSet.contains(search) {
-						hit++
-					}
-					total++
+			startTime := time.Now().UnixNano()
+			for j := 0; j < cfg.itersPerRound; j++ {
+				// search := currentSdd.nextSearchValue()
+				search := testdata[j]
+				if currentSet.contains(search) {
+					hit++
 				}
-			})
-			hitRea := float32(hit) / float32(total)
-			timePerIter[i] = float64(benchres[i].T) / float64(benchres[i].N)
-			memPerIter := float64(benchres[i].MemBytes) / float64(benchres[i].N)
-			allocPerIter := float64(benchres[i].MemAllocs) / float64(benchres[i].N)
-			fmt.Printf("map;Contains;%d;%d;%.3f;%d;%d;%.3f;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, i, benchres[i].N, hitRea, timePerIter[i], memPerIter, allocPerIter)
+				total++
+			}
+			endTime := time.Now().UnixNano()
+			timePerIter[i] = float64(endTime-startTime) / float64(cfg.itersPerRound)
 		}
+		hitRea := float32(hit) / float32(total)
 		med := median(timePerIter)
-		fmt.Printf("Median time: %.3fns/iteration\n", med)
+		fmt.Printf("map;Contains;%d;%d;%.3f;%d;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRound, hitRea, med)
 	}
 }
