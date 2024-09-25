@@ -121,7 +121,7 @@ var config = []struct {
 	{initSetSize: 21, finalSetSize: 1, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
 	{initSetSize: 21, finalSetSize: 10, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
 	{initSetSize: 21, finalSetSize: 100, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
-	{initSetSize: 21, finalSetSize: 1000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
+	/*{initSetSize: 21, finalSetSize: 1000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 9},
 	/*			{initSetSize: 21, finalSetSize: 40, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
 				{initSetSize: 21, finalSetSize: 50, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
 				{initSetSize: 21, finalSetSize: 6, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
@@ -219,207 +219,8 @@ var config = []struct {
 				{initSetSize: 21, finalSetSize: 98, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
 				{initSetSize: 21, finalSetSize: 99, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
 				{initSetSize: 21, finalSetSize: 100, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 101, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 102, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 103, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 104, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 105, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 106, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 107, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 108, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 109, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 110, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 111, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 112, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 113, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 114, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 115, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 116, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 117, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 118, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 119, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 120, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 121, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 122, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 123, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 124, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 125, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 126, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 127, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 128, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 129, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 130, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 131, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 132, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 133, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 134, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 135, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 136, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 137, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 138, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 139, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 140, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 141, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 142, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 143, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 144, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 145, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 146, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 147, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 148, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 149, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 150, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 151, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 152, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 153, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 154, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 155, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 156, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 157, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 158, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 159, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 160, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 161, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 162, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 163, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 164, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 165, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 166, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 167, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 168, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 169, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 170, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 171, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 172, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 173, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 174, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 175, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 176, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 177, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 178, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 179, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 180, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 181, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 182, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 183, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 184, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 185, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 186, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 187, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 188, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 189, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 190, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 191, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 192, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 193, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 194, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 195, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 196, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 197, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 198, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 199, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 200, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 201, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 202, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 203, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 204, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 205, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 206, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 207, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 208, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 209, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 210, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 211, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 212, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 213, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 214, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 215, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 216, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 217, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 218, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 219, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 220, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 221, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 222, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 223, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 224, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 225, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 226, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 227, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 228, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 229, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 230, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 231, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 232, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 233, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 234, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 235, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 236, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 237, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 238, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 239, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 240, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 241, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 242, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 243, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 244, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 245, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 246, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 247, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 248, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 249, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 250, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 251, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 252, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 253, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 254, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 255, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 256, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 257, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 258, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 259, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 260, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 261, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 262, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 263, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 264, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 265, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 266, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 267, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 268, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 269, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 270, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 271, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 272, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 273, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 274, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 275, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 276, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 277, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 278, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 279, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 280, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 281, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 282, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 283, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 284, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 285, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 286, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 287, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 288, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 289, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 290, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 291, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 292, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 293, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 294, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 295, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 296, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 297, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 298, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 299, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-				{initSetSize: 21, finalSetSize: 300, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, rounds: 7},
-	*/}
+	*/
+}
 
 func TestPrngSeqLength(t *testing.T) {
 	state := prngState{state: 0x1234567890ABCDEF}
@@ -626,10 +427,16 @@ func TestSet3Find(t *testing.T) {
 			var total uint64 = 0
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			currentSet := FromArray(currentSdd.setValues)
+			// testdata := make([]uint64, 100_000_001) // i.e. b.N limit + 1 probe
+			// for j := range 100_000_001 {
+			//	testdata[j] = currentSdd.nextSearchValue()
+			// }
+			// currentSdd = nil
 			runtime.GC()
 			benchres[i] = testing.Benchmark(func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for j := 0; j < b.N; j++ {
 					search := currentSdd.nextSearchValue()
+					// search := testdata[j]
 					if currentSet.Contains(search) {
 						hit++
 					}
@@ -640,7 +447,7 @@ func TestSet3Find(t *testing.T) {
 			timePerIter[i] = float64(benchres[i].T) / float64(benchres[i].N)
 			memPerIter := float64(benchres[i].MemBytes) / float64(benchres[i].N)
 			allocPerIter := float64(benchres[i].MemAllocs) / float64(benchres[i].N)
-			fmt.Printf("Set3;Contains;%d;%d;%.3f;%d;%d;%.3f;%.3f;%.3f;%.3f\n", len(currentSdd.setValues), cfg.finalSetSize, cfg.targetHitRatio, i, benchres[i].N, hitRea, timePerIter[i], memPerIter, allocPerIter)
+			fmt.Printf("Set3;Contains;%d;%d;%.3f;%d;%d;%.3f;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, i, benchres[i].N, hitRea, timePerIter[i], memPerIter, allocPerIter)
 		}
 		med := median(timePerIter)
 		fmt.Printf("Median time: %.3fns/iteration\n", med)
@@ -660,10 +467,16 @@ func TestNativeMapFind(t *testing.T) {
 			for j := 0; j < len(currentSdd.setValues); j++ {
 				currentSet[currentSdd.setValues[j]] = struct{}{}
 			}
+			// testdata := make([]uint64, 250_000_001) // i.e. b.N limit + 1 probe
+			// for j := range 250_000_001 {
+			//	testdata[j] = currentSdd.nextSearchValue()
+			// }
+			// currentSdd = nil
 			runtime.GC()
 			benchres[i] = testing.Benchmark(func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for j := 0; j < b.N; j++ {
 					search := currentSdd.nextSearchValue()
+					// search := testdata[j]
 					_, b := currentSet[search]
 					if b {
 						hit++
@@ -675,7 +488,7 @@ func TestNativeMapFind(t *testing.T) {
 			timePerIter[i] = float64(benchres[i].T) / float64(benchres[i].N)
 			memPerIter := float64(benchres[i].MemBytes) / float64(benchres[i].N)
 			allocPerIter := float64(benchres[i].MemAllocs) / float64(benchres[i].N)
-			fmt.Printf("map;Contains;%d;%d;%.3f;%d;%d;%.3f;%.3f;%.3f;%.3f\n", len(currentSdd.setValues), cfg.finalSetSize, cfg.targetHitRatio, i, benchres[i].N, hitRea, timePerIter[i], memPerIter, allocPerIter)
+			fmt.Printf("map;Contains;%d;%d;%.3f;%d;%d;%.3f;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, i, benchres[i].N, hitRea, timePerIter[i], memPerIter, allocPerIter)
 		}
 		med := median(timePerIter)
 		fmt.Printf("Median time: %.3fns/iteration\n", med)
