@@ -455,7 +455,7 @@ func TestNativeMapFind(t *testing.T) {
 		var total uint64 = 0
 		for i := 0; i < cfg.rounds; i++ {
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
-			currentSet := emptyNativeWithCapacity[uint64](uint32(len(currentSdd.setValues)))
+			currentSet := emptyNativeWithCapacity[uint64](uint32(len(currentSdd.setValues) * 7 / 5))
 			for j := 0; j < len(currentSdd.setValues); j++ {
 				currentSet.add(currentSdd.setValues[j])
 			}
