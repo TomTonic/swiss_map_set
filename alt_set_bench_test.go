@@ -86,11 +86,6 @@ func (thisCfg *searchDataDriver) nextSearchValue() uint64 {
 }
 
 func uniqueRandomNumbers(setSize int, rng *prngState) []uint64 {
-	// tmpSet := EmptyWithCapacity[uint64](2 * uint32(setSize))
-	// for tmpSet.Count() < uint32(setSize) {
-	//	tmpSet.Add(rng.Uint64())
-	// }
-	// result := tmpSet.ToArray()
 	result := make([]uint64, setSize)
 	for i := 0; i < setSize; i++ {
 		result[i] = rng.Uint64()
@@ -118,13 +113,14 @@ var config = []struct {
 	itersPerRoundFind int
 	rounds            int
 }{
-	{initSetSize: 21, finalSetSize: 1, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 200_000, itersPerRoundFind: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 1, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 400_000, itersPerRoundFind: 10_000_000, rounds: 11},
 	{initSetSize: 21, finalSetSize: 10, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 200_000, itersPerRoundFind: 10_000_000, rounds: 11},
 	{initSetSize: 21, finalSetSize: 100, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 100_000, itersPerRoundFind: 10_000_000, rounds: 11},
-	{initSetSize: 21, finalSetSize: 1000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 10_000, itersPerRoundFind: 10_000_000, rounds: 11},
-	{initSetSize: 21, finalSetSize: 10000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 1_000, itersPerRoundFind: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 1_000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 10_000, itersPerRoundFind: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 10_000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 1_000, itersPerRoundFind: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 100_000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 500, itersPerRoundFind: 10_000_000, rounds: 11},
+	{initSetSize: 21, finalSetSize: 1_000_000, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 100, itersPerRoundFind: 10_000_000, rounds: 7},
 	/*
-		{initSetSize: 21, finalSetSize: 6, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 100_000, itersPerRoundFind: 10_000_000, rounds: 11},
 		{initSetSize: 21, finalSetSize: 7, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 100_000, itersPerRoundFind: 10_000_000, rounds: 11},
 		{initSetSize: 21, finalSetSize: 8, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 100_000, itersPerRoundFind: 10_000_000, rounds: 11},
 		{initSetSize: 21, finalSetSize: 9, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 100_000, itersPerRoundFind: 10_000_000, rounds: 11},
@@ -340,7 +336,7 @@ func BenchmarkSearchDataDriver(b *testing.B) {
 }
 
 func TestSet3Fill(t *testing.T) {
-	fmt.Printf("Impl;Operation;init;size;hit_target;total_iter;hit_rea;time/iter[ns];mem/element[byte]\n")
+	fmt.Printf("Implementation;Operation;Capacity Requested by Constructor;Final Size of Set;Target Hit Rate;Number of Iterations;Measured Hit Rate;Nanoseconds per Iteration;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerIter := make([]float64, cfg.rounds)
@@ -373,12 +369,12 @@ func TestSet3Fill(t *testing.T) {
 		}
 		medTime := median(timePerIter)
 		medMem := median(memPerIter)
-		fmt.Printf("Set3;find;%d;%d;%.3f;%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRoundFill, 0.0, medTime, medMem)
+		fmt.Printf("Set3;fill;%d;%d;%.3f;%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRoundFill, 0.0, medTime, medMem)
 	}
 }
 
 func TestNativeMapFill(t *testing.T) {
-	fmt.Printf("Impl;Operation;init;size;hit_target;total_iter;hit_rea;time/iter[ns];mem/element[byte]\n")
+	fmt.Printf("Implementation;Operation;Capacity Requested by Constructor;Final Size of Set;Target Hit Rate;Number of Iterations;Measured Hit Rate;Nanoseconds per Iteration;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerIter := make([]float64, cfg.rounds)
@@ -411,7 +407,7 @@ func TestNativeMapFill(t *testing.T) {
 		}
 		medTime := median(timePerIter)
 		medMem := median(memPerIter)
-		fmt.Printf("map;find;%d;%d;%.3f;%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRoundFill, 0.0, medTime, medMem)
+		fmt.Printf("map;fill;%d;%d;%.3f;%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRoundFill, 0.0, medTime, medMem)
 	}
 }
 
@@ -458,20 +454,27 @@ func median(data []float64) float64 {
 }
 
 func TestSet3Find(t *testing.T) {
-	fmt.Printf("Impl;Operation;init;size;hit_target;total_iter;hit_rea;time/iter[ns]\n")
+	fmt.Printf("Implementation;Operation;Capacity Requested by Constructor;Final Size of Set;Target Hit Rate;Number of Iterations;Measured Hit Rate;Nanoseconds per Iteration;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
+		memPerRound := make([]float64, cfg.rounds)
 		var hit uint64 = 0
 		var total uint64 = 0
 		for i := 0; i < cfg.rounds; i++ {
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
-			currentSet := FromArray(currentSdd.setValues)
 			testdata := make([]uint64, cfg.itersPerRoundFind)
 			for j := range cfg.itersPerRoundFind {
 				testdata[j] = currentSdd.nextSearchValue()
 			}
-			currentSdd = nil
+			var startMem, endMem runtime.MemStats
 			runtime.GC()
+			runtime.ReadMemStats(&startMem)
+			currentSet := FromArray(currentSdd.setValues)
+			runtime.GC()
+			runtime.ReadMemStats(&endMem)
+			//memPerRound[i] = float64((endMem.HeapAlloc+endMem.StackInuse+endMem.StackSys)-(startMem.HeapAlloc+startMem.StackInuse+startMem.StackSys)) / float64(cfg.finalSetSize)
+			memPerRound[i] = float64(endMem.TotalAlloc-startMem.TotalAlloc) / float64(cfg.finalSetSize)
+
 			startTime := time.Now().UnixNano()
 			for j := 0; j < cfg.itersPerRoundFind; j++ {
 				// search := currentSdd.nextSearchValue()
@@ -485,29 +488,37 @@ func TestSet3Find(t *testing.T) {
 			timePerIter[i] = float64(endTime-startTime) / float64(cfg.itersPerRoundFind)
 		}
 		hitRea := float32(hit) / float32(total)
-		med := median(timePerIter)
-		fmt.Printf("Set3;find;%d;%d;%.3f;%d;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRoundFind, hitRea, med)
+		medTime := median(timePerIter)
+		medMem := median(memPerRound)
+		fmt.Printf("map;fill;%d;%d;%.3f;%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRoundFind, hitRea, medTime, medMem)
 	}
 }
 
 func TestNativeMapFind(t *testing.T) {
-	fmt.Printf("Impl;Operation;init;size;hit_target;total_iter;hit_rea;time/iter[ns]\n")
+	fmt.Printf("Implementation;Operation;Capacity Requested by Constructor;Final Size of Set;Target Hit Rate;Number of Iterations;Measured Hit Rate;Nanoseconds per Iteration;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
+		memPerRound := make([]float64, cfg.rounds)
 		var hit uint64 = 0
 		var total uint64 = 0
 		for i := 0; i < cfg.rounds; i++ {
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
-			currentSet := emptyNativeWithCapacity[uint64](uint32(len(currentSdd.setValues) * 7 / 5))
-			for j := 0; j < len(currentSdd.setValues); j++ {
-				currentSet.add(currentSdd.setValues[j])
-			}
 			testdata := make([]uint64, cfg.itersPerRoundFind)
 			for j := range cfg.itersPerRoundFind {
 				testdata[j] = currentSdd.nextSearchValue()
 			}
-			currentSdd = nil
+			var startMem, endMem runtime.MemStats
 			runtime.GC()
+			runtime.ReadMemStats(&startMem)
+			currentSet := emptyNativeWithCapacity[uint64](uint32(cfg.finalSetSize))
+			for j := 0; j < len(currentSdd.setValues); j++ {
+				currentSet.add(currentSdd.setValues[j])
+			}
+			runtime.GC()
+			runtime.ReadMemStats(&endMem)
+			//memPerRound[i] = float64((endMem.HeapAlloc+endMem.StackInuse+endMem.StackSys)-(startMem.HeapAlloc+startMem.StackInuse+startMem.StackSys)) / float64(cfg.finalSetSize)
+			memPerRound[i] = float64(endMem.TotalAlloc-startMem.TotalAlloc) / float64(cfg.finalSetSize)
+
 			startTime := time.Now().UnixNano()
 			for j := 0; j < cfg.itersPerRoundFind; j++ {
 				// search := currentSdd.nextSearchValue()
@@ -521,7 +532,8 @@ func TestNativeMapFind(t *testing.T) {
 			timePerIter[i] = float64(endTime-startTime) / float64(cfg.itersPerRoundFind)
 		}
 		hitRea := float32(hit) / float32(total)
-		med := median(timePerIter)
-		fmt.Printf("map;find;%d;%d;%.3f;%d;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRoundFind, hitRea, med)
+		medTime := median(timePerIter)
+		medMem := median(memPerRound)
+		fmt.Printf("map;fill;%d;%d;%.3f;%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.targetHitRatio, cfg.itersPerRoundFind, hitRea, medTime, medMem)
 	}
 }
