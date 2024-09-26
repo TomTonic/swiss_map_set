@@ -188,7 +188,7 @@ func testSetClear[K comparable](t *testing.T, keys []K) {
 
 	// Assert that the Set was actually cleared...
 	var k K
-	for _, s := range m.group_slot {
+	for _, s := range m.groupSlot {
 		for _, v := range s {
 			assert.Equal(t, k, v)
 		}
@@ -233,28 +233,28 @@ func TestSet3MutableRange(t *testing.T) {
 		{
 			name: "Empty set",
 			set: Set3[int]{
-				group_ctrl: []uint64{set3AllEmpty},
-				group_slot: [][8]int{{0, 0, 0, 0, 0, 0, 0, 0}},
+				groupCtrl: []uint64{set3AllEmpty},
+				groupSlot: [][8]int{{0, 0, 0, 0, 0, 0, 0, 0}},
 			},
 			expected: []int{},
 		},
 		{
 			name: "Single group with elements",
 			set: Set3[int]{
-				group_ctrl: []uint64{0x8001800180018001},
-				group_slot: [][8]int{{1, 0, 3, 0, 5, 0, 7, 0}},
+				groupCtrl: []uint64{0x8001800180018001},
+				groupSlot: [][8]int{{1, 0, 3, 0, 5, 0, 7, 0}},
 			},
 			expected: []int{1, 3, 5, 7},
 		},
 		{
 			name: "Multiple groups with elements",
 			set: Set3[int]{
-				group_ctrl: []uint64{
+				groupCtrl: []uint64{
 					0x8001800180018001,
 					0x0180018001800180,
 					set3AllEmpty,
 				},
-				group_slot: [][8]int{
+				groupSlot: [][8]int{
 					{1, 2, 3, 4, 5, 6, 7, 8},
 					{9, 10, 11, 12, 13, 14, 15, 16},
 					{9, 10, 11, 12, 13, 14, 15, 16},
@@ -310,28 +310,28 @@ func TestSet3ImmutableRange(t *testing.T) {
 		{
 			name: "Empty set",
 			set: Set3[int]{
-				group_ctrl: []uint64{set3AllEmpty},
-				group_slot: [][8]int{{0, 0, 0, 0, 0, 0, 0, 0}},
+				groupCtrl: []uint64{set3AllEmpty},
+				groupSlot: [][8]int{{0, 0, 0, 0, 0, 0, 0, 0}},
 			},
 			expected: []int{},
 		},
 		{
 			name: "Single group with elements",
 			set: Set3[int]{
-				group_ctrl: []uint64{0x8001800180018001},
-				group_slot: [][8]int{{1, 0, 3, 0, 5, 0, 7, 0}},
+				groupCtrl: []uint64{0x8001800180018001},
+				groupSlot: [][8]int{{1, 0, 3, 0, 5, 0, 7, 0}},
 			},
 			expected: []int{1, 3, 5, 7},
 		},
 		{
 			name: "Multiple groups with elements",
 			set: Set3[int]{
-				group_ctrl: []uint64{
+				groupCtrl: []uint64{
 					0x8001800180018001,
 					0x0180018001800180,
 					set3AllEmpty,
 				},
-				group_slot: [][8]int{
+				groupSlot: [][8]int{
 					{1, 2, 3, 4, 5, 6, 7, 8},
 					{9, 10, 11, 12, 13, 14, 15, 16},
 					{9, 10, 11, 12, 13, 14, 15, 16},
@@ -346,8 +346,8 @@ func TestSet3ImmutableRange(t *testing.T) {
 			var result []int
 			i := 0
 			for e := range tt.set.ImmutableRange() {
-				tt.set.group_ctrl[0] = set3AllDeleted
-				tt.set.group_slot[0][i] = i * 20
+				tt.set.groupCtrl[0] = set3AllDeleted
+				tt.set.groupSlot[0][i] = i * 20
 				result = append(result, e)
 				i++
 			}
@@ -669,19 +669,19 @@ func TestSet3Subtract(t *testing.T) {
 func TestSet3Rehash(t *testing.T) {
 	data := genUint32Data(53)
 	set := FromArray(data)
-	assert.True(t, len(set.group_ctrl) == 9, "set shall contain 9 groups")
+	assert.True(t, len(set.groupCtrl) == 9, "set shall contain 9 groups")
 	set.RehashTo(200)
-	assert.True(t, len(set.group_ctrl) == 31, "set shall contain 30 groups")
+	assert.True(t, len(set.groupCtrl) == 31, "set shall contain 30 groups")
 	for _, e := range data {
 		assert.True(t, set.Contains(e), "set shall contain %v", e)
 	}
 	set.RehashTo(20)
-	assert.True(t, len(set.group_ctrl) == 31, "set shall contain 30 groups")
+	assert.True(t, len(set.groupCtrl) == 31, "set shall contain 30 groups")
 	for _, e := range data {
 		assert.True(t, set.Contains(e), "set shall contain %v", e)
 	}
 	set.Rehash()
-	assert.True(t, len(set.group_ctrl) == 9, "set shall contain 9 groups")
+	assert.True(t, len(set.groupCtrl) == 9, "set shall contain 9 groups")
 	for _, e := range data {
 		assert.True(t, set.Contains(e), "set shall contain %v", e)
 	}

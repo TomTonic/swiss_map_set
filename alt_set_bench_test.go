@@ -39,7 +39,7 @@ func (thisState *prngState) Uint64() uint64 {
 	x ^= x >> 27
 	thisState.state = x
 	thisState.round++
-	return uint64(x) * 0x2545F4914F6CDD1D
+	return x * 0x2545F4914F6CDD1D
 }
 
 func (thisState *prngState) Uint32() uint32 {
@@ -320,7 +320,7 @@ func BenchmarkSearchDataDriver(b *testing.B) {
 		runtime.GC()
 		// Give the garbage collector some time to complete
 		time.Sleep(2 * time.Second)
-		var x uint64 = 0
+		var x uint64
 		b.Run(fmt.Sprintf("setSize(%d);hit(%.1f)", len(sdd.setValues), sdd.hitRatio), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				x ^= sdd.nextSearchValue()
@@ -336,6 +336,7 @@ func BenchmarkSearchDataDriver(b *testing.B) {
 }
 
 func TestSet3Fill(t *testing.T) {
+	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
 	fmt.Printf("Implementation;Operation;Capacity Requested by Constructor;Final Size of Set;Target Hit Rate;Number of Iterations;Measured Hit Rate;Nanoseconds per Iteration;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
@@ -374,6 +375,7 @@ func TestSet3Fill(t *testing.T) {
 }
 
 func TestNativeMapFill(t *testing.T) {
+	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
 	fmt.Printf("Implementation;Operation;Capacity Requested by Constructor;Final Size of Set;Target Hit Rate;Number of Iterations;Measured Hit Rate;Nanoseconds per Iteration;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
@@ -421,8 +423,8 @@ func BenchmarkSet3FindVariance(b *testing.B) {
 				runtime.GC()
 				// Give the garbage collector some time to complete
 				time.Sleep(1 * time.Second)
-				var hit uint64 = 0
-				var total uint64 = 0
+				var hit uint64
+				var total uint64
 				b.Run(fmt.Sprintf("init(%d);final(%d);hit(%f)-s(%d)", len(sdd.setValues), cfg.finalSetSize, cfg.targetHitRatio, seedUp), func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
 						search := sdd.nextSearchValue()
@@ -439,27 +441,28 @@ func BenchmarkSet3FindVariance(b *testing.B) {
 }
 
 func median(data []float64) float64 {
+	if len(data) == 0 {
+		return 0
+	}
 	dataCopy := make([]float64, len(data))
 	copy(dataCopy, data)
 	sort.Float64s(dataCopy)
 
 	l := len(dataCopy)
-	if l == 0 {
-		return 0
-	} else if l%2 == 0 {
+	if l%2 == 0 {
 		return (dataCopy[l/2-1] + dataCopy[l/2]) / 2
-	} else {
-		return dataCopy[l/2]
 	}
+	return dataCopy[l/2]
 }
 
 func TestSet3Find(t *testing.T) {
+	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
 	fmt.Printf("Implementation;Operation;Capacity Requested by Constructor;Final Size of Set;Target Hit Rate;Number of Iterations;Measured Hit Rate;Nanoseconds per Iteration;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerRound := make([]float64, cfg.rounds)
-		var hit uint64 = 0
-		var total uint64 = 0
+		var hit uint64
+		var total uint64
 		for i := 0; i < cfg.rounds; i++ {
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			testdata := make([]uint64, cfg.itersPerRoundFind)
@@ -472,7 +475,6 @@ func TestSet3Find(t *testing.T) {
 			currentSet := FromArray(currentSdd.setValues)
 			runtime.GC()
 			runtime.ReadMemStats(&endMem)
-			//memPerRound[i] = float64((endMem.HeapAlloc+endMem.StackInuse+endMem.StackSys)-(startMem.HeapAlloc+startMem.StackInuse+startMem.StackSys)) / float64(cfg.finalSetSize)
 			memPerRound[i] = float64(endMem.TotalAlloc-startMem.TotalAlloc) / float64(cfg.finalSetSize)
 
 			startTime := time.Now().UnixNano()
@@ -495,12 +497,13 @@ func TestSet3Find(t *testing.T) {
 }
 
 func TestNativeMapFind(t *testing.T) {
+	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
 	fmt.Printf("Implementation;Operation;Capacity Requested by Constructor;Final Size of Set;Target Hit Rate;Number of Iterations;Measured Hit Rate;Nanoseconds per Iteration;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerRound := make([]float64, cfg.rounds)
-		var hit uint64 = 0
-		var total uint64 = 0
+		var hit uint64
+		var total uint64
 		for i := 0; i < cfg.rounds; i++ {
 			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			testdata := make([]uint64, cfg.itersPerRoundFind)
@@ -516,7 +519,6 @@ func TestNativeMapFind(t *testing.T) {
 			}
 			runtime.GC()
 			runtime.ReadMemStats(&endMem)
-			//memPerRound[i] = float64((endMem.HeapAlloc+endMem.StackInuse+endMem.StackSys)-(startMem.HeapAlloc+startMem.StackInuse+startMem.StackSys)) / float64(cfg.finalSetSize)
 			memPerRound[i] = float64(endMem.TotalAlloc-startMem.TotalAlloc) / float64(cfg.finalSetSize)
 
 			startTime := time.Now().UnixNano()
