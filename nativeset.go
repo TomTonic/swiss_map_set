@@ -19,3 +19,8 @@ func (thisSet *nativeSetType[T]) contains(val T) bool {
 	_, b := (*thisSet)[val]
 	return b
 }
+
+//go:noinline
+func (thisSet *nativeSetType[T]) count() uint32 {
+	return uint32(len(*thisSet))
+}
