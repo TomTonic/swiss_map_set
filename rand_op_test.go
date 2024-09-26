@@ -39,7 +39,7 @@ var randOpsConfig = []struct {
 }
 
 func TestRandomOps(t *testing.T) {
-	// t.Skip("unskip for cpu profiling - runs 0.5-1 minutes")
+	t.Skip("unskip for cpu profiling - runs 0.5-1 minutes")
 	// Start profiling
 	f, err := os.Create("cpu.prof")
 	if err != nil {

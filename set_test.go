@@ -669,7 +669,7 @@ func TestSet3Subtract(t *testing.T) {
 func TestSet3Rehash(t *testing.T) {
 	data := genUint32Data(53)
 	set := FromArray(data)
-	assert.True(t, len(set.groupCtrl) == 9, "set shall contain 9 groups")
+	assert.True(t, len(set.groupCtrl) == 12, "set shall contain 12 groups")
 	set.RehashTo(200)
 	assert.True(t, len(set.groupCtrl) == 31, "set shall contain 30 groups")
 	for _, e := range data {
