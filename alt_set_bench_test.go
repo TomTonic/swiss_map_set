@@ -534,7 +534,7 @@ func BenchmarkSearchDataDriver(b *testing.B) {
 
 func TestSet3Fill(t *testing.T) {
 	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
-	fmt.Printf("Implementation;Operations in Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
+	fmt.Printf("Implementation;Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerIter := make([]float64, cfg.rounds)
@@ -567,13 +567,13 @@ func TestSet3Fill(t *testing.T) {
 		}
 		medTime := median(timePerIter)
 		medMem := median(memPerIter)
-		fmt.Printf("Set3;EmptyWithCapacity[uint64](%d) and %d*Add(uint64);%d;%.3f;%.3f;%.3f\n", cfg.initSetSize, cfg.finalSetSize, cfg.finalSetSize, 0.0, medTime, medMem)
+		fmt.Printf("Set3;Fill={BenchMem{BenchTime{EmptyWithCapacity[uint64](%d) + %d*Add(uint64)}}};%d;%.3f;%.3f;%.3f\n", cfg.initSetSize, cfg.finalSetSize, cfg.finalSetSize, 0.0, medTime, medMem)
 	}
 }
 
 func TestNativeMapFill(t *testing.T) {
 	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
-	fmt.Printf("Implementation;Operations in Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
+	fmt.Printf("Implementation;Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerIter := make([]float64, cfg.rounds)
@@ -606,7 +606,7 @@ func TestNativeMapFill(t *testing.T) {
 		}
 		medTime := median(timePerIter)
 		medMem := median(memPerIter)
-		fmt.Printf("nativeMap;emptyNativeWithCapacity[uint64](%d) and %d*add(uint64);%d;%.3f;%.3f;%.3f\n", cfg.initSetSize, cfg.finalSetSize, cfg.finalSetSize, 0.0, medTime, medMem)
+		fmt.Printf("nativeMap;Fill={BenchMem{BenchTime{emptyNativeWithCapacity[uint64](%d) + %d*add(uint64)}}};%d;%.3f;%.3f;%.3f\n", cfg.initSetSize, cfg.finalSetSize, cfg.finalSetSize, 0.0, medTime, medMem)
 	}
 }
 
@@ -654,7 +654,7 @@ func median(data []float64) float64 {
 
 func TestSet3Find(t *testing.T) {
 	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
-	fmt.Printf("Implementation;Operations in Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
+	fmt.Printf("Implementation;Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerRound := make([]float64, cfg.rounds)
@@ -689,13 +689,13 @@ func TestSet3Find(t *testing.T) {
 		hitRea := float32(hit) / float32(total)
 		medTime := median(timePerIter)
 		medMem := median(memPerRound)
-		fmt.Printf("Set3;FromArray([%d]uint64) and %d*Contains(uint64);%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.finalSetSize, hitRea, medTime, medMem)
+		fmt.Printf("Set3;Find={BenchMem{FromArray([%d]uint64)} + BenchTime{Contains(uint64)}};%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, hitRea, medTime, medMem)
 	}
 }
 
 func TestNativeMapFind(t *testing.T) {
 	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
-	fmt.Printf("Implementation;Operations in Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
+	fmt.Printf("Implementation;Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
 	for _, cfg := range config {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerRound := make([]float64, cfg.rounds)
@@ -733,6 +733,6 @@ func TestNativeMapFind(t *testing.T) {
 		hitRea := float32(hit) / float32(total)
 		medTime := median(timePerIter)
 		medMem := median(memPerRound)
-		fmt.Printf("nativeMap;emptyNativeWithCapacity[uint64](%d)/add() and %d*contains(uint64);%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.finalSetSize, hitRea, medTime, medMem)
+		fmt.Printf("nativeMap;Find={BenchMem{emptyNativeWithCapacity[uint64](%d) + %d*add(uint64)} + BenchTime{contains(uint64)}};%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.finalSetSize, hitRea, medTime, medMem)
 	}
 }
