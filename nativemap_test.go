@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestNativeSetEmptyNativeWithCapacity(t *testing.T) {
+func TestNativeMapEmptyNativeWithCapacity(t *testing.T) {
 	set := emptyNativeWithCapacity[int](0)
 	if set == nil {
 		t.Error("Expected non-nil set")
@@ -14,7 +14,7 @@ func TestNativeSetEmptyNativeWithCapacity(t *testing.T) {
 	}
 }
 
-func TestNativeSetAddAndContains(t *testing.T) {
+func TestNativeMapAddAndContains(t *testing.T) {
 	set := emptyNativeWithCapacity[int](0)
 	set.add(1)
 	set.add(2)
@@ -34,7 +34,7 @@ func TestNativeSetAddAndContains(t *testing.T) {
 	}
 }
 
-func TestNativeSetCount(t *testing.T) {
+func TestNativeMapCount(t *testing.T) {
 	set := emptyNativeWithCapacity[int](0)
 	set.add(1)
 	set.add(2)
