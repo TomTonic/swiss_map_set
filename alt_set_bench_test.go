@@ -127,7 +127,7 @@ func TestPrngSeqLength(t *testing.T) {
 	limit := uint32(30_000_000)
 	set := EmptyWithCapacity[uint64](limit * 2)
 	counter := uint32(0)
-	for set.Count() < limit {
+	for set.Size() < limit {
 		set.Add(state.Uint64())
 		counter++
 	}
@@ -264,7 +264,7 @@ func TestSet3Fill(t *testing.T) {
 			runtime.ReadMemStats(&endMem)
 			// make sure everything is there as expected
 			for j := 0; j < cfg.itersPerRoundFill; j++ {
-				if sets[j].Count() != uint32(cfg.finalSetSize) {
+				if sets[j].Size() != uint32(cfg.finalSetSize) {
 					t.Fail()
 				}
 			}

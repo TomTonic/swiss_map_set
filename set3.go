@@ -83,7 +83,7 @@ func (thisSet *Set3[T]) String() string {
 	}
 	var builder strings.Builder
 	builder.WriteString("{")
-	total := thisSet.Count()
+	total := thisSet.Size()
 	cnt := uint32(0)
 	for e := range thisSet.MutableRange() {
 		builder.WriteString(fmt.Sprintf("%v", e))
@@ -134,8 +134,8 @@ func EmptyWithCapacity[T comparable](initialCapacity uint32) *Set3[T] {
 	return result
 }
 
-func calcReqNrOfGroups(reqCapa uint32) int {
-	reqNrOfGroups := int((float64(reqCapa) + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad)
+func calcReqNrOfGroups(reqCapa uint32) uint32 {
+	reqNrOfGroups := uint32((float64(reqCapa) + set3maxAvgGroupLoad - 1) / set3maxAvgGroupLoad)
 	if reqNrOfGroups == 0 {
 		reqNrOfGroups = 1
 	}
@@ -143,7 +143,7 @@ func calcReqNrOfGroups(reqCapa uint32) int {
 }
 
 /*
-From is a convenience constructor to directly create a Set3 from given arguments. It creates a Set3 with the required capacity and adds all (unique) elements to this set.
+From is a convenience constructor to directly create a Set3 from given arguments. It creates a new Set3 and adds all (unique) elements to this set.
 
 If the arguments contain duplicates, the duplicates are omitted. If no arguments are provided, an empty Set3 is returned.
 
@@ -167,7 +167,7 @@ func From[T comparable](args ...T) *Set3[T] {
 }
 
 /*
-FromArray is a convenience constructor to directly create a Set3 from given values. It creates a Set3 with the required capacity and adds all (unique) elements to this set.
+FromArray is a convenience constructor to directly create a Set3 from given values. It creates a new Set3 and adds all (unique) elements to this set.
 
 If the array contains duplicates, the duplicates are omitted. If data is nil, an empty Set3 is returned.
 
@@ -291,7 +291,7 @@ func (thisSet *Set3[T]) ContainsAll(thatSet *Set3[T]) bool {
 		// nil is interpreted as empty set
 		return true
 	}
-	if thisSet.Count() < thatSet.Count() {
+	if thisSet.Size() < thatSet.Size() {
 		return false
 	}
 	for e := range thatSet.MutableRange() {
@@ -374,9 +374,9 @@ func (thisSet *Set3[T]) Equals(thatSet *Set3[T]) bool {
 	}
 	if thatSet == nil {
 		// nil is interpreted as empty set
-		return thisSet.Count() == 0
+		return thisSet.Size() == 0
 	}
-	if thisSet.Count() != thatSet.Count() {
+	if thisSet.Size() != thatSet.Size() {
 		return false
 	}
 	for elem := range thatSet.MutableRange() {
@@ -458,7 +458,7 @@ Example:
 	intArray := set.ToArray() // will be an []int of length 2 containing 7 and 31 in arbitrary order
 */
 func (thisSet *Set3[T]) ToArray() []T {
-	result := make([]T, thisSet.Count())
+	result := make([]T, thisSet.Size())
 	i := 0
 	for e := range thisSet.MutableRange() {
 		result[i] = e
@@ -477,7 +477,7 @@ Example:
 */
 func (thisSet *Set3[T]) Add(element T) {
 	if thisSet.resident >= thisSet.elementLimit {
-		thisSet.rehashToNumGroups(thisSet.nextSize())
+		thisSet.rehashToNumGroups(thisSet.calcNextGroupCount())
 	}
 	hash := thisSet.hashFunction.Hash(element)
 	H2 := (hash & 0x0000_0000_0000_007f)
@@ -603,7 +603,7 @@ func (thisSet *Set3[T]) Unite(thatSet *Set3[T]) *Set3[T] {
 	if thatSet == nil {
 		return thisSet.Clone()
 	}
-	potentialSize := thisSet.Count() + thatSet.Count()
+	potentialSize := thisSet.Size() + thatSet.Size()
 	result := EmptyWithCapacity[T](potentialSize)
 	for e := range thisSet.MutableRange() {
 		result.Add(e)
@@ -787,7 +787,7 @@ func (thisSet *Set3[T]) Subtract(thatSet *Set3[T]) *Set3[T] {
 	if thatSet == nil {
 		return thisSet.Clone()
 	}
-	potentialSize := thisSet.Count()
+	potentialSize := thisSet.Size()
 	result := EmptyWithCapacity[T](potentialSize)
 	for e := range thisSet.MutableRange() {
 		if !thatSet.Contains(e) {
@@ -842,7 +842,7 @@ func (thisSet *Set3[T]) Intersect(thatSet *Set3[T]) *Set3[T] {
 	var smallerSet *Set3[T]
 	var biggerSet *Set3[T]
 
-	if thisSet.Count() < thatSet.Count() {
+	if thisSet.Size() < thatSet.Size() {
 		smallerSet = thisSet
 		biggerSet = thatSet
 	} else {
@@ -850,7 +850,7 @@ func (thisSet *Set3[T]) Intersect(thatSet *Set3[T]) *Set3[T] {
 		biggerSet = thisSet
 	}
 
-	potentialSize := smallerSet.Count()
+	potentialSize := smallerSet.Size()
 	result := EmptyWithCapacity[T](potentialSize)
 	for e := range smallerSet.ImmutableRange() {
 		if biggerSet.Contains(e) {
@@ -880,8 +880,8 @@ func (thisSet *Set3[T]) IntersectWithArray(data []T) *Set3[T] {
 
 	var potentialSize uint32
 
-	if thisSet.Count() < uint32(len(data)) { //nolint:gosec
-		potentialSize = thisSet.Count()
+	if thisSet.Size() < uint32(len(data)) { //nolint:gosec
+		potentialSize = thisSet.Size()
 	} else {
 		potentialSize = uint32(len(data)) //nolint:gosec
 	}
@@ -919,7 +919,7 @@ func (thisSet *Set3[T]) ContainsAny(thatSet *Set3[T]) bool {
 	var smallerSet *Set3[T]
 	var biggerSet *Set3[T]
 
-	if thisSet.Count() < thatSet.Count() {
+	if thisSet.Size() < thatSet.Size() {
 		smallerSet = thisSet
 		biggerSet = thatSet
 	} else {
@@ -986,7 +986,7 @@ func (thisSet *Set3[T]) ContainsAnyFromArray(data []T) bool {
 }
 
 /*
-Count returns the number of elements in thisSet.
+Size returns the number of elements in thisSet.
 
 Example:
 
@@ -994,18 +994,18 @@ Example:
 	set.Add(7)
 	set.Add(8)
 	set.Add(9)
-	c := set.Count()   // c will be 3
+	c := set.Size()   // c will be 3
 */
-func (thisSet *Set3[T]) Count() uint32 {
+func (thisSet *Set3[T]) Size() uint32 {
 	return thisSet.resident - thisSet.dead
 }
 
-func (thisSet *Set3[T]) nextSize() (n uint32) {
-	n = uint32(len(thisSet.groupCtrl)) * 2 //nolint:gosec
+func (thisSet *Set3[T]) calcNextGroupCount() uint32 {
+	n := len(thisSet.groupCtrl) * 2
 	if thisSet.dead >= (thisSet.resident / 2) {
-		n = uint32(len(thisSet.groupCtrl)) //nolint:gosec
+		n = len(thisSet.groupCtrl)
 	}
-	return
+	return uint32(n) //nolint:gosec
 }
 
 /*
@@ -1020,12 +1020,12 @@ Example:
 	set.Rehash() // saves memory consumed by set
 */
 func (thisSet *Set3[T]) Rehash() {
-	numGroups := uint32(calcReqNrOfGroups(thisSet.Count())) //nolint:gosec
+	numGroups := calcReqNrOfGroups(thisSet.Size()) //nolint:gosec
 	thisSet.rehashToNumGroups(numGroups)
 }
 
 /*
-Rorganizes the backend of thisSet: RehashTo redistributs the elements of thisSet onto a new hashset in its backend, e.g., to ensure faster element access.
+Rorganizes the backend of thisSet: RehashToCapacity redistributs the elements of thisSet onto a new hashset in its backend, e.g., to ensure faster element access.
 
 If newSize is smaller than the current number of elements in thisSet, this function does nothing. If newSize is equal to the current number of elements in thisSet, this function does the same as [Rehash].
 
@@ -1035,13 +1035,13 @@ Example:
 	set.Add(1)
 	set.Add(2)
 	set.Add(3)
-	set.RehashTo(1000) // ensures that you can add at least 997 more elements to set without rehashing
+	set.RehashToCapacity(1000) // ensures that you can add at least 997 more elements to set without rehashing
 */
-func (thisSet *Set3[T]) RehashTo(newSize uint32) {
-	if newSize < thisSet.Count() {
+func (thisSet *Set3[T]) RehashToCapacity(newCapacity uint32) {
+	if newCapacity < thisSet.Size() {
 		return
 	}
-	newNumGroups := uint32(calcReqNrOfGroups(newSize)) //nolint:gosec
+	newNumGroups := calcReqNrOfGroups(newCapacity)
 	thisSet.rehashToNumGroups(newNumGroups)
 }
 

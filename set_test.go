@@ -119,16 +119,16 @@ func genUint32Data(count int) (keys []uint32) {
 
 func testSetPut[K comparable](t *testing.T, keys []K) {
 	m := EmptyWithCapacity[K](uint32(len(keys)))
-	assert.Equal(t, uint32(0), m.Count())
+	assert.Equal(t, uint32(0), m.Size())
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, uint32(len(keys)), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Size())
 	// overwrite
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, uint32(len(keys)), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Size())
 	for _, key := range keys {
 		ok := m.Contains(key)
 		assert.True(t, ok)
@@ -149,33 +149,33 @@ func testSetHas[K comparable](t *testing.T, keys []K) {
 
 func testSetDelete[K comparable](t *testing.T, keys []K) {
 	m := EmptyWithCapacity[K](uint32(len(keys)))
-	assert.Equal(t, uint32(0), m.Count())
+	assert.Equal(t, uint32(0), m.Size())
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, uint32(len(keys)), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Size())
 	for _, key := range keys {
 		m.Remove(key)
 		ok := m.Contains(key)
 		assert.False(t, ok)
 	}
-	assert.Equal(t, uint32(0), m.Count())
+	assert.Equal(t, uint32(0), m.Size())
 	// put keys back after deleting them
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, uint32(len(keys)), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Size())
 }
 
 func testSetClear[K comparable](t *testing.T, keys []K) {
 	m := EmptyWithCapacity[K](0)
-	assert.Equal(t, uint32(0), m.Count())
+	assert.Equal(t, uint32(0), m.Size())
 	for _, key := range keys {
 		m.Add(key)
 	}
-	assert.Equal(t, uint32(len(keys)), m.Count())
+	assert.Equal(t, uint32(len(keys)), m.Size())
 	m.Clear()
-	assert.Equal(t, uint32(0), m.Count())
+	assert.Equal(t, uint32(0), m.Size())
 	for _, key := range keys {
 		ok := m.Contains(key)
 		assert.False(t, ok)
@@ -284,7 +284,7 @@ func TestSet3MutableRange(t *testing.T) {
 
 func TestSet3MutableRangeTwice(t *testing.T) {
 	set := FromArray[string]([]string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"})
-	strary := make([]string, set.Count())
+	strary := make([]string, set.Size())
 
 	idx := 0
 	for s := range set.MutableRange() {
@@ -670,12 +670,12 @@ func TestSet3Rehash(t *testing.T) {
 	data := genUint32Data(53)
 	set := FromArray(data)
 	assert.True(t, len(set.groupCtrl) == 12, "set shall contain 12 groups")
-	set.RehashTo(200)
+	set.RehashToCapacity(200)
 	assert.True(t, len(set.groupCtrl) == 31, "set shall contain 30 groups")
 	for _, e := range data {
 		assert.True(t, set.Contains(e), "set shall contain %v", e)
 	}
-	set.RehashTo(20)
+	set.RehashToCapacity(20)
 	assert.True(t, len(set.groupCtrl) == 31, "set shall contain 30 groups")
 	for _, e := range data {
 		assert.True(t, set.Contains(e), "set shall contain %v", e)
@@ -927,7 +927,7 @@ func TestRemoveAllOf(t *testing.T) {
 	// Test case 3: Remove from an empty set
 	set = Empty[int]()
 	set.RemoveAllOf(1, 2)
-	if set.Count() != 0 {
+	if set.Size() != 0 {
 		t.Errorf("RemoveAllOf failed on empty set")
 	}
 

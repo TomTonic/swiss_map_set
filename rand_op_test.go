@@ -107,7 +107,7 @@ func deleteSomeSetsCompletely(numSets int, sets []*Set3[uint32]) {
 func refillAllSets(numSets, setSize, setVar, mod int, sets []*Set3[uint32]) {
 	for i := 0; i < numSets; i++ {
 		targetSize := uint32(setSize + rand.Intn(setVar))
-		for j := sets[i].Count(); j < targetSize; j++ {
+		for j := sets[i].Size(); j < targetSize; j++ {
 			sets[i].Add(rand.Uint32() % uint32(mod))
 		}
 	}
