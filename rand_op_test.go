@@ -54,39 +54,12 @@ func TestRandomOps(t *testing.T) {
 	defer pprof.StopCPUProfile()
 
 	for _, cfg := range randOpsConfig {
-		for iterations := 0; iterations < 100; iterations++ {
+		for iterations := 0; iterations < 200; iterations++ {
 			sets := make([]*Set3[uint32], cfg.numSets)
-			// fill all sets
-			for i := 0; i < cfg.numSets; i++ {
-				sets[i] = Empty[uint32]()
-				targetSize := cfg.setSize + rand.Intn(cfg.setVar)
-				for j := 0; j < targetSize; j++ {
-					sets[i].Add(rand.Uint32() % uint32(cfg.mod))
-				}
-			}
-			// delete some elements
-			for i := 0; i < cfg.numSets/3; i++ {
-				idx := rand.Intn(cfg.numSets)
-				for i := 0; i < cfg.mod*2; i++ {
-					sets[idx].Remove(rand.Uint32() % uint32(cfg.mod))
-				}
-				sets[idx].AddAllFromArray([]uint32{rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod),
-					rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod)})
-			}
-			// delete some sets completely
-			for i := 0; i < cfg.numSets/4; i++ {
-				idx := rand.Intn(cfg.numSets)
-				clone := sets[idx].Clone()
-				sets[idx].Clear()
-				sets[idx].AddAll(clone)
-			}
-			// refill all sets
-			for i := 0; i < cfg.numSets; i++ {
-				targetSize := uint32(cfg.setSize + rand.Intn(cfg.setVar))
-				for j := sets[i].Count(); j < targetSize; j++ {
-					sets[i].Add(rand.Uint32() % uint32(cfg.mod))
-				}
-			}
+			fillAllSets(cfg.numSets, cfg.setSize, cfg.setVar, cfg.mod, sets)
+			deleteSomeElementsAndAddSomeNewOnes(cfg.numSets, cfg.mod, sets)
+			deleteSomeSetsCompletely(cfg.numSets, sets)
+			refillAllSets(cfg.numSets, cfg.setSize, cfg.setVar, cfg.mod, sets)
 
 			// add all elements to a superset
 			superset := Empty[uint32]()
@@ -94,18 +67,67 @@ func TestRandomOps(t *testing.T) {
 				superset.AddAll(sets[i])
 			}
 
-			for i := 0; i < cfg.numSets; i++ {
-				intersect := superset.Intersect(sets[i])
-				equal := intersect.Equals(sets[i])
-				stringIntersect := intersect.String()
-				stringSet := sets[i].String()
-				assert.True(t, equal, stringIntersect+" != "+stringSet)
-				newSet := FromArray([]uint32{rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod),
-					rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod), rand.Uint32() % uint32(cfg.mod)})
-				stringNewSet := newSet.String()
-				unequal := intersect.Equals(newSet)
-				assert.False(t, unequal, stringIntersect+" == "+stringNewSet)
-			}
+			supersetTests(cfg.numSets, cfg.mod, superset, sets, t)
 		}
+	}
+}
+
+func fillAllSets(numSets, setSize, setVar, mod int, sets []*Set3[uint32]) {
+	for i := 0; i < numSets; i++ {
+		sets[i] = Empty[uint32]()
+		targetSize := setSize + rand.Intn(setVar)
+		for j := 0; j < targetSize; j++ {
+			sets[i].Add(rand.Uint32() % uint32(mod))
+		}
+	}
+}
+
+func deleteSomeElementsAndAddSomeNewOnes(numSets, mod int, sets []*Set3[uint32]) {
+	for i := 0; i < numSets/3; i++ {
+		idx := rand.Intn(numSets)
+		sets[idx].AddAllFromArray([]uint32{rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod),
+			rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod)})
+		for i := 0; i < mod*2; i++ {
+			sets[idx].Remove(rand.Uint32() % uint32(mod))
+		}
+		sets[idx].AddAllOf(rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod),
+			rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod))
+	}
+}
+
+func deleteSomeSetsCompletely(numSets int, sets []*Set3[uint32]) {
+	for i := 0; i < numSets/4; i++ {
+		idx := rand.Intn(numSets)
+		clone := sets[idx].Clone()
+		sets[idx].Clear()
+		sets[idx].AddAll(clone)
+	}
+}
+
+func refillAllSets(numSets, setSize, setVar, mod int, sets []*Set3[uint32]) {
+	for i := 0; i < numSets; i++ {
+		targetSize := uint32(setSize + rand.Intn(setVar))
+		for j := sets[i].Size(); j < targetSize; j++ {
+			sets[i].Add(rand.Uint32() % uint32(mod))
+		}
+	}
+}
+
+func supersetTests(numSets, mod int, superset *Set3[uint32], sets []*Set3[uint32], t *testing.T) {
+	bingo := false
+	doh := false
+	for i := 0; i < numSets; i++ {
+		intersect := superset.Intersect(sets[i])
+		bingo = sets[i].ContainsAllOf(rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod)) || bingo
+		doh = sets[i].ContainsAnyOf(rand.Uint32()%uint32(mod), rand.Uint32()%uint32(mod)) || doh
+		equal := intersect.Equals(sets[i])
+		stringIntersect := intersect.String()
+		stringSet := sets[i].String()
+		assert.True(t, equal, stringIntersect+" != "+stringSet)
+		newSet := FromArray([]uint32{rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod),
+			rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod), rand.Uint32() % uint32(mod)})
+		stringNewSet := newSet.String()
+		unequal := intersect.Equals(newSet)
+		assert.False(t, unequal, stringIntersect+" == "+stringNewSet)
 	}
 }
