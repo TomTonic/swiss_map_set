@@ -7,11 +7,15 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9470/badge)](https://www.bestpractices.dev/projects/9470)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TomTonic/Set3/badge)](https://scorecard.dev/viewer/?uri=github.com/TomTonic/Set3)
 
-Set3 is a fast and pure set implmentation in and for Golang. I wrote it as an alternative to set implementations based on `map[type]struct{}`. Set3 is 10%-20% faster and uses 40% less memory than `map[type]struct{}`. As hash function, Set3 uses the built-in hash function of Golang via [dolthub/maphash](https://github.com/dolthub/maphash).
+Set3 is a high-performance, native Golang set implementation. It offers a significant improvement in speed and memory efficiency,
+being 10%-30% faster and utilizing 25% less memory compared to `map[type]struct{}`. Additionally, Set3 provides the flexibility to
+optimize for either space consumption or speed through the RehashToCapacity(newCapacity) function. This level of performance and
+adaptability is unattainable with implementations based on `map[type]struct{}`, which is the standard foundation for most set implementations in Go.
 
 The code is derived from [SwissMap](https://github.com/dolthub/swiss) and it implements the "Fast, Efficient, Cache-friendly Hash Table" found in [Abseil](https://abseil.io/blog/20180927-swisstables).
 For details on the algorithm see the [CppCon 2017 talk by Matt Kulukundis](https://www.youtube.com/watch?v=ncHmEUmJZf4).
 The dependency on x86 assembler for [SSE2/SSE3](https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions) instructions has been removed for portability and speed; the code runs faster without SSE and the necessary additional stack frame.
+As hash function, Set3 uses the original hash function from `map[type]struct{}` via [dolthub/maphash](https://github.com/dolthub/maphash).
 
 The name "Set3" comes from the fact that this was the 3rd attempt for an optimized datastructure/code-layout to get the best runtime performance.
 
@@ -69,30 +73,39 @@ func TestExample(t *testing.T) {
 
 ## Performance
 
-The following benchmarks have been performed with [v0.2.0](https://github.com/TomTonic/Set3/releases/tag/v0.2.0) to compare `Set3[uint32]` with `map[uint32]struct{}` with the command:
+The following benchmarks have been performed with [v0.4.0](https://github.com/TomTonic/Set3/releases/tag/v0.4.0) to compare `Set3[uint64]` with `map[uint64]struct{}` with the command:
 
 ```sh
-go test -benchmem -benchtime=6s -timeout 480m -run="^$" -bench "^(BenchmarkSet3Fill|BenchmarkNativeMapFill|BenchmarkSet3Find|BenchmarkNativeMapFind)$" github.com/TomTonic/Set3 > benchresult.txt
+go test -v -count=1 -run "^(TestSet3Fill|TestNativeMapFill|TestSet3Find|TestNativeMapFind)$" github.com/TomTonic/Set3 -timeout=120m > benchresult.txt
 ```
 
-(Raw benchmark results are available [here](https://raw.githubusercontent.com/TomTonic/Set3/main/benchresult.txt). Go version 1.23.1, no PGO.)
+(Raw benchmark results are available [here](https://raw.githubusercontent.com/TomTonic/Set3/main/benchresult.txt). Go version 1.23.1, no PGO.
+Please note that you have to comment out the instructions to skip the tests first (`t.Skip("...")`). The whole benchmark runs about 45 minutes.)
 
 ### Inserting Nodes into an Empty Set
 
-The total time for inserting random elements into newly allocated sets with an initial capacity of 21 elements; i.e. rehashing took place multiple times for larger sets.
+The following chart illustrates the time required to insert random uint64 values into newly allocated sets.
+The displayed times encompass the set allocation process.
+All sets were allocated with an initial capacity of 21 elements, which is the current default in Set3.
+As a result, rehashing occurs—sometimes multiple times—for larger sets.
+This effect is clearly visible in the two charts below.
 
 n = 1 ... 300 (step size +1, linear scale)
-![Inserting Nodes into an Empty Set, n = 1 ... 300 (step size +1, linear scale)](https://github.com/user-attachments/assets/3dbf7f75-8859-46da-9512-c61e151db2fd)
+![Time for Inserting n Random Elements into an Empty Set, n = 1 ... 300 (step size +1, linear scale)](https://github.com/user-attachments/assets/b2496fb4-2ff8-4539-9e95-748d108df830)
 
-n = 50 ... 6,193,533 (step size +5%, log scale)
-![Inserting Nodes into an Empty Set, n = 50 ... 6,193,533 (step size +5%, log scale)](https://github.com/user-attachments/assets/17bfa1d8-403f-460f-9f15-1c6394ea0c9e)
+Please note that the memory chart displays the total memory consumption divided by the number of elements in the set.
+This effectively represents the memory usage for storing a single element, i.e., 8 bytes.
+Additionally, be aware of the lower bound of 10 bytes and the logarithmic scale of the y-axis.
+
+n = 1 ... 300 (step size +1, linear scale)
+![Memory required to store an Element in a Set of Size n, n = 1 ... 300 (step size +1, linear scale)](https://github.com/user-attachments/assets/ba04f5cf-bca1-453b-9f90-e55d9ede58e5)
 
 ### Searching Nodes in a Populated Set
 
-Total time for searching 5000 elements in sets of different sizes, 30% hit ratio.
+The following chart illustrates the time required to determine whether a random value is present in the set.
+The test driver maintains a 30% hit ratio, ensuring that 30% of the queried values are contained within the set, while the remaining 70% are not.
+The x-axis represents sets of varying sizes, and the y-axis indicates the average time taken to look up a random value in a set of the corresponding size.
 
 n = 1 ... 300 (step size +1, linear scale)
-![Searching Nodes in a Populated Set, n = 1 ... 300 (step size +1, linear scale)](https://github.com/user-attachments/assets/52ba00e2-32e8-41f4-ae6c-a2a237990fb1)
+![Time for Searching Random Values in a Set of Size n, 30% Hit Rate, n = 1 ... 300 (step size +1, linear scale)](https://github.com/user-attachments/assets/bf77efc4-fb60-4de4-a65e-087318e3958c)
 
-n = 50 ... 6,193,533 (step size +5%, linear scale)
-![Searching Nodes in a Populated Set, n = 50 ... 6,193,533 (step size +5%, linear scale)](https://github.com/user-attachments/assets/0aec23ec-52b7-45c1-ae75-f2397651bd85)
