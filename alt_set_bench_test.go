@@ -16,93 +16,12 @@ package set3
 
 import (
 	"fmt"
-	"math"
 	"runtime"
-	"sort"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	benchmark "github.com/TomTonic/Set3/benchmark"
 )
-
-// see https://en.wikipedia.org/wiki/Xorshift#xorshift*
-// This PRNG is deterministic and has a period of 2^64-1. This way we can ensure, we always get a new 'random' number, that is unknown to the set.
-type prngState struct {
-	state uint64
-	round uint64 // for debugging purposes
-}
-
-func (thisState *prngState) Uint64() uint64 {
-	x := thisState.state
-	x ^= x >> 12
-	x ^= x << 25
-	x ^= x >> 27
-	thisState.state = x
-	thisState.round++
-	return x * 0x2545F4914F6CDD1D
-}
-
-func (thisState *prngState) Uint32() uint32 {
-	x := thisState.Uint64()
-	x >>= 32 // the upper 32 bit have better 'randomness', see https://en.wikipedia.org/wiki/Xorshift#xorshift*
-	return uint32(x)
-}
-
-type searchDataDriver struct {
-	rng       *prngState
-	setValues []uint64
-	hitRatio  float64
-}
-
-func newSearchDataDriver(setSize int, targetHitRatio float64, seed uint64) *searchDataDriver {
-	s := prngState{state: seed}
-	vals := uniqueRandomNumbers(setSize, &s)
-	result := &searchDataDriver{
-		rng: &s,
-		// setValues: shuffleArray(vals, &s, 3),
-		setValues: vals,
-		hitRatio:  float64(targetHitRatio),
-	}
-	return result
-}
-
-// this function is designed in a way that both paths - table lookup and random number generation only - are about equaly fast/slow.
-// the current implementation differs in only 1-2% execution speed for the two paths.
-func (thisCfg *searchDataDriver) nextSearchValue() uint64 {
-	x := uint64(float64(math.MaxUint64) * thisCfg.hitRatio)
-	rndVal := thisCfg.rng.Uint64()
-	upper32 := uint32(rndVal >> 32)
-	idx := upper32 % uint32(len(thisCfg.setValues))
-	tableVal := thisCfg.setValues[idx]
-	var result uint64
-	if thisCfg.rng.Uint64() < x {
-		// this shall be a hit
-		result = rndVal ^ tableVal ^ rndVal // use both values to make both paths equally slow/fast
-	} else {
-		// this shall be a miss
-		result = tableVal ^ rndVal ^ tableVal // use both values to make both paths equally slow/fast
-	}
-	return result
-}
-
-func uniqueRandomNumbers(setSize int, rng *prngState) []uint64 {
-	result := make([]uint64, setSize)
-	for i := 0; i < setSize; i++ {
-		result[i] = rng.Uint64()
-	}
-	return result
-}
-
-func shuffleArray(input []uint64, rng *prngState, rounds int) []uint64 {
-	a := input // copy array
-	for r := 0; r < rounds; r++ {
-		for i := len(a) - 1; i > 0; i-- {
-			j := rng.Uint32() % uint32(i+1)
-			a[i], a[j] = a[j], a[i]
-		}
-	}
-	return a
-}
 
 var config = []struct {
 	initSetSize       int
@@ -415,123 +334,6 @@ var config = []struct {
 	{initSetSize: 21, finalSetSize: 300, targetHitRatio: 0.3, seed: 0x1234567890ABCDEF, itersPerRoundFill: 10037, itersPerRoundFind: 10_000_000, rounds: 11},
 }
 
-func TestPrngSeqLength(t *testing.T) {
-	state := prngState{state: 0x1234567890ABCDEF}
-	limit := uint32(30_000_000)
-	set := EmptyWithCapacity[uint64](limit * 7 / 5)
-	counter := uint32(0)
-	for set.Size() < limit {
-		set.Add(state.Uint64())
-		counter++
-	}
-	assert.True(t, counter == limit, "sequence < limit")
-}
-
-func TestPrngDeterminism(t *testing.T) {
-	state1 := prngState{state: 0x1234567890ABCDEF}
-	state2 := prngState{state: 0x1234567890ABCDEF}
-	limit := 30_000_000
-	for i := 0; i < limit; i++ {
-		v1 := state1.Uint64()
-		v2 := state2.Uint64()
-		assert.True(t, v1 == v2, "in sync: values not equal in round %d", i)
-	}
-	_ = state2.Uint64() // skip one value to get both prng out of sync
-	for i := 0; i < limit; i++ {
-		v1 := state1.Uint64()
-		v2 := state2.Uint64()
-		assert.False(t, v1 == v2, "out of sync: values equal in round %d", i)
-	}
-	_ = state1.Uint64() // get both prng back in sync
-	for i := 0; i < limit; i++ {
-		v1 := state1.Uint64()
-		v2 := state2.Uint64()
-		assert.True(t, v1 == v2, "back in sync: values not equal in round %d", i)
-	}
-}
-
-func TestUniqueRandomNumbersDeterministic(t *testing.T) {
-	s1 := prngState{state: 0x1234567890ABCDEF}
-	s2 := prngState{state: 0x1234567890ABCDEF}
-
-	urn1 := uniqueRandomNumbers(5000, &s1)
-	urn2 := uniqueRandomNumbers(5000, &s2)
-	assert.True(t, slicesEqual(urn1, urn2), "slices not equal")
-
-}
-
-func TestSearchDataDriver(t *testing.T) {
-	setSize := 50_000
-	targetHitRatio := 0.3
-	seed := uint64(0x1234567890ABCDEF)
-
-	sdd1 := newSearchDataDriver(setSize, targetHitRatio, seed)
-	sdd2 := newSearchDataDriver(setSize, targetHitRatio, seed)
-	assert.True(t, slicesEqual(sdd1.setValues, sdd2.setValues), "slices not equal")
-
-	set := FromArray(sdd1.setValues)
-
-	rounds := 5_000_000
-	hits := 0
-	for i := 0; i < rounds; i++ {
-		v1 := sdd1.nextSearchValue()
-		v2 := sdd2.nextSearchValue()
-		assert.True(t, v1 == v2, "values not equal in round %d", i)
-		if set.Contains(v1) {
-			hits++
-		}
-	}
-	actualHitRatio := float64(hits) / float64(rounds)
-	lowerBound := targetHitRatio * 0.99
-	upperBound := targetHitRatio * 1.01
-	assert.True(t, actualHitRatio > lowerBound && actualHitRatio < upperBound, "actual hit ratio (%d) missed target hit ratio by more than 1 percent", actualHitRatio)
-}
-
-func slicesEqual(a, b []uint64) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-var sddConfig = []struct {
-	setSize int
-	seed    uint64
-}{
-	{setSize: 1, seed: 0x1234567890ABCDEF},
-	{setSize: 10, seed: 0x1234567890ABCDEF},
-	{setSize: 10_000, seed: 0x1234567890ABCDEF},
-	{setSize: 10_000_000, seed: 0x1234567890ABCDEF},
-}
-
-func BenchmarkSearchDataDriver(b *testing.B) {
-	// b.Skip("unskip to benchmark nextSearchValue paths")
-	for _, cfg := range sddConfig {
-		sdd := newSearchDataDriver(cfg.setSize, 0.0, cfg.seed)
-		// Force garbage collection
-		runtime.GC()
-		// Give the garbage collector some time to complete
-		time.Sleep(2 * time.Second)
-		var x uint64
-		b.Run(fmt.Sprintf("setSize(%d);hit(%.1f)", len(sdd.setValues), sdd.hitRatio), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				x ^= sdd.nextSearchValue()
-			}
-		})
-		sdd.hitRatio = 1.0
-		b.Run(fmt.Sprintf("setSize(%d);hit(%.1f)", len(sdd.setValues), sdd.hitRatio), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				x ^= sdd.nextSearchValue()
-			}
-		})
-	}
-}
-
 func TestSet3Fill(t *testing.T) {
 	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
 	fmt.Printf("Implementation;Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
@@ -539,7 +341,7 @@ func TestSet3Fill(t *testing.T) {
 		timePerIter := make([]float64, cfg.rounds)
 		memPerIter := make([]float64, cfg.rounds)
 		for i := 0; i < cfg.rounds; i++ {
-			sdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
+			sdd := benchmark.NewSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			sets := make([]*Set3[uint64], cfg.itersPerRoundFill)
 			var startMem, endMem runtime.MemStats
 			runtime.GC()
@@ -547,8 +349,8 @@ func TestSet3Fill(t *testing.T) {
 			startTime := time.Now().UnixNano()
 			for j := 0; j < cfg.itersPerRoundFill; j++ {
 				set := EmptyWithCapacity[uint64](uint32(cfg.initSetSize))
-				for k := 0; k < len(sdd.setValues); k++ {
-					set.Add(sdd.setValues[k])
+				for k := 0; k < len(sdd.SetValues); k++ {
+					set.Add(sdd.SetValues[k])
 				}
 				sets[j] = set // keep it to determine memory consumtion
 			}
@@ -565,48 +367,9 @@ func TestSet3Fill(t *testing.T) {
 			timePerIter[i] = float64(endTime-startTime) / float64(cfg.itersPerRoundFill)
 			memPerIter[i] = float64((endMem.HeapAlloc+endMem.StackInuse+endMem.StackSys)-(startMem.HeapAlloc+startMem.StackInuse+startMem.StackSys)) / float64(cfg.itersPerRoundFill) / float64(cfg.finalSetSize)
 		}
-		medTime := median(timePerIter)
-		medMem := median(memPerIter)
+		medTime := benchmark.Median(timePerIter)
+		medMem := benchmark.Median(memPerIter)
 		fmt.Printf("Set3;Fill={BenchMem{BenchTime{EmptyWithCapacity[uint64](%d) + %d*Add(uint64)}}};%d;%.3f;%.3f;%.3f\n", cfg.initSetSize, cfg.finalSetSize, cfg.finalSetSize, 0.0, medTime, medMem)
-	}
-}
-
-func TestNativeMapFill(t *testing.T) {
-	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
-	fmt.Printf("Implementation;Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
-	for _, cfg := range config {
-		timePerIter := make([]float64, cfg.rounds)
-		memPerIter := make([]float64, cfg.rounds)
-		for i := 0; i < cfg.rounds; i++ {
-			sdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
-			sets := make([]*nativeMap[uint64], cfg.itersPerRoundFill)
-			var startMem, endMem runtime.MemStats
-			runtime.GC()
-			runtime.ReadMemStats(&startMem)
-			startTime := time.Now().UnixNano()
-			for j := 0; j < cfg.itersPerRoundFill; j++ {
-				set := emptyNativeWithCapacity[uint64](uint32(cfg.initSetSize))
-				for k := 0; k < len(sdd.setValues); k++ {
-					set.add(sdd.setValues[k])
-				}
-				sets[j] = set // keep it to determine memory consumtion
-			}
-			endTime := time.Now().UnixNano()
-			runtime.GC()
-			runtime.ReadMemStats(&endMem)
-			// make sure everything is there as expected
-			for j := 0; j < cfg.itersPerRoundFill; j++ {
-				if sets[j].count() != uint32(cfg.finalSetSize) {
-					t.Fail()
-				}
-			}
-
-			timePerIter[i] = float64(endTime-startTime) / float64(cfg.itersPerRoundFill)
-			memPerIter[i] = float64((endMem.HeapAlloc+endMem.StackInuse+endMem.StackSys)-(startMem.HeapAlloc+startMem.StackInuse+startMem.StackSys)) / float64(cfg.itersPerRoundFill) / float64(cfg.finalSetSize)
-		}
-		medTime := median(timePerIter)
-		medMem := median(memPerIter)
-		fmt.Printf("nativeMap;Fill={BenchMem{BenchTime{emptyNativeWithCapacity[uint64](%d) + %d*add(uint64)}}};%d;%.3f;%.3f;%.3f\n", cfg.initSetSize, cfg.finalSetSize, cfg.finalSetSize, 0.0, medTime, medMem)
 	}
 }
 
@@ -614,17 +377,17 @@ func BenchmarkSet3FindVariance(b *testing.B) {
 	for _, cfg := range config {
 		for seedUp := 0; seedUp < 10; seedUp++ {
 			for round := 0; round < 10; round++ {
-				sdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(seedUp*51))
-				resultSet := FromArray(sdd.setValues)
+				sdd := benchmark.NewSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(seedUp*51))
+				resultSet := FromArray(sdd.SetValues)
 				// Force garbage collection
 				runtime.GC()
 				// Give the garbage collector some time to complete
 				time.Sleep(1 * time.Second)
 				var hit uint64
 				var total uint64
-				b.Run(fmt.Sprintf("init(%d);final(%d);hit(%f)-s(%d)", len(sdd.setValues), cfg.finalSetSize, cfg.targetHitRatio, seedUp), func(b *testing.B) {
+				b.Run(fmt.Sprintf("init(%d);final(%d);hit(%f)-s(%d)", len(sdd.SetValues), cfg.finalSetSize, cfg.targetHitRatio, seedUp), func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
-						search := sdd.nextSearchValue()
+						search := sdd.NextSearchValue()
 						if resultSet.Contains(search) {
 							hit++
 						}
@@ -637,21 +400,6 @@ func BenchmarkSet3FindVariance(b *testing.B) {
 	}
 }
 
-func median(data []float64) float64 {
-	if len(data) == 0 {
-		return 0
-	}
-	dataCopy := make([]float64, len(data))
-	copy(dataCopy, data)
-	sort.Float64s(dataCopy)
-
-	l := len(dataCopy)
-	if l%2 == 0 {
-		return (dataCopy[l/2-1] + dataCopy[l/2]) / 2
-	}
-	return dataCopy[l/2]
-}
-
 func TestSet3Find(t *testing.T) {
 	t.Skip("unskip for benchmark tests - runs 3-5 minutes")
 	fmt.Printf("Implementation;Benchmark;Final Size;Hit Rate;Nanoseconds per Sample;Required Bytes per Element\n")
@@ -661,15 +409,15 @@ func TestSet3Find(t *testing.T) {
 		var hit uint64
 		var total uint64
 		for i := 0; i < cfg.rounds; i++ {
-			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
+			currentSdd := benchmark.NewSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			testdata := make([]uint64, cfg.itersPerRoundFind)
 			for j := range cfg.itersPerRoundFind {
-				testdata[j] = currentSdd.nextSearchValue()
+				testdata[j] = currentSdd.NextSearchValue()
 			}
 			var startMem, endMem runtime.MemStats
 			runtime.GC()
 			runtime.ReadMemStats(&startMem)
-			currentSet := FromArray(currentSdd.setValues)
+			currentSet := FromArray(currentSdd.SetValues)
 			runtime.GC()
 			runtime.ReadMemStats(&endMem)
 			memPerRound[i] = float64(endMem.TotalAlloc-startMem.TotalAlloc) / float64(cfg.finalSetSize)
@@ -687,8 +435,8 @@ func TestSet3Find(t *testing.T) {
 			timePerIter[i] = float64(endTime-startTime) / float64(cfg.itersPerRoundFind)
 		}
 		hitRea := float32(hit) / float32(total)
-		medTime := median(timePerIter)
-		medMem := median(memPerRound)
+		medTime := benchmark.Median(timePerIter)
+		medMem := benchmark.Median(memPerRound)
 		fmt.Printf("Set3;Find={BenchMem{FromArray([%d]uint64)} + BenchTime{Contains(uint64)}};%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, hitRea, medTime, medMem)
 	}
 }
@@ -702,17 +450,17 @@ func TestNativeMapFind(t *testing.T) {
 		var hit uint64
 		var total uint64
 		for i := 0; i < cfg.rounds; i++ {
-			currentSdd := newSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
+			currentSdd := benchmark.NewSearchDataDriver(cfg.finalSetSize, cfg.targetHitRatio, cfg.seed+uint64(i*53))
 			testdata := make([]uint64, cfg.itersPerRoundFind)
 			for j := range cfg.itersPerRoundFind {
-				testdata[j] = currentSdd.nextSearchValue()
+				testdata[j] = currentSdd.NextSearchValue()
 			}
 			var startMem, endMem runtime.MemStats
 			runtime.GC()
 			runtime.ReadMemStats(&startMem)
 			currentSet := emptyNativeWithCapacity[uint64](uint32(cfg.finalSetSize))
-			for j := 0; j < len(currentSdd.setValues); j++ {
-				currentSet.add(currentSdd.setValues[j])
+			for j := 0; j < len(currentSdd.SetValues); j++ {
+				currentSet.add(currentSdd.SetValues[j])
 			}
 			runtime.GC()
 			runtime.ReadMemStats(&endMem)
@@ -731,8 +479,8 @@ func TestNativeMapFind(t *testing.T) {
 			timePerIter[i] = float64(endTime-startTime) / float64(cfg.itersPerRoundFind)
 		}
 		hitRea := float32(hit) / float32(total)
-		medTime := median(timePerIter)
-		medMem := median(memPerRound)
+		medTime := benchmark.Median(timePerIter)
+		medMem := benchmark.Median(memPerRound)
 		fmt.Printf("nativeMap;Find={BenchMem{emptyNativeWithCapacity[uint64](%d) + %d*add(uint64)} + BenchTime{contains(uint64)}};%d;%.3f;%.3f;%.3f\n", cfg.finalSetSize, cfg.finalSetSize, cfg.finalSetSize, hitRea, medTime, medMem)
 	}
 }
