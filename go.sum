@@ -1,3 +1,5 @@
+github.com/TomTonic/objectsize v0.1.0 h1:wv/b81zGXcmOcLmMzdZhkNGhNC5rPvXB0ETVXR4CPz8=
+github.com/TomTonic/objectsize v0.1.0/go.mod h1:iGOPa4NoAurwORao9WkXG8GaDgzVCcGdIfE4F/Dz0Cg=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dolthub/maphash v0.1.0 h1:bsQ7JsF4FkkWyrP3oCnFJgrCUAFbFf3kOl4L/QxPDyQ=
