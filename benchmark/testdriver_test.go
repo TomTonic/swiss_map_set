@@ -11,7 +11,7 @@ import (
 )
 
 func TestPrngSeqLength(t *testing.T) {
-	state := prngState{state: 0x1234567890ABCDEF}
+	state := PRNG{State: 0x1234567890ABCDEF}
 	limit := uint32(30_000_000)
 	set := set3.EmptyWithCapacity[uint64](limit * 7 / 5)
 	counter := uint32(0)
@@ -23,8 +23,8 @@ func TestPrngSeqLength(t *testing.T) {
 }
 
 func TestPrngDeterminism(t *testing.T) {
-	state1 := prngState{state: 0x1234567890ABCDEF}
-	state2 := prngState{state: 0x1234567890ABCDEF}
+	state1 := PRNG{State: 0x1234567890ABCDEF}
+	state2 := PRNG{State: 0x1234567890ABCDEF}
 	limit := 30_000_000
 	for i := 0; i < limit; i++ {
 		v1 := state1.Uint64()
@@ -46,8 +46,8 @@ func TestPrngDeterminism(t *testing.T) {
 }
 
 func TestUniqueRandomNumbersDeterministic(t *testing.T) {
-	s1 := prngState{state: 0x1234567890ABCDEF}
-	s2 := prngState{state: 0x1234567890ABCDEF}
+	s1 := PRNG{State: 0x1234567890ABCDEF}
+	s2 := PRNG{State: 0x1234567890ABCDEF}
 
 	urn1 := uniqueRandomNumbers(5000, &s1)
 	urn2 := uniqueRandomNumbers(5000, &s2)
