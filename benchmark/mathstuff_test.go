@@ -54,6 +54,29 @@ func TestStatistics(t *testing.T) {
 	}
 }
 
+func TestFloatsEqualWithTolerance(t *testing.T) {
+	testCases := []struct {
+		f1, f2, tolerance float64
+		expected          bool
+	}{
+		{1.0, 1.0, 10, true},   // Exact match
+		{1.0, 1.05, 10, true},  // Within tolerance
+		{1.0, 1.15, 10, false}, // Outside tolerance
+		{1.0, 0.95, 10, true},  // Within tolerance
+		{1.0, 0.85, 10, false}, // Outside tolerance
+		{1.0, 1.1, 10, true},   // On the edge of tolerance
+		{1.0, 0.9, 10, true},   // On the edge of tolerance
+		{2.0, 2.15, 10, true},  // Inside tolerance
+		{2.0, 1.85, 10, true},  // Inside tolerance
+		{2.0, 2.21, 10, true},  // Inside tolerance of second parameter
+	}
+
+	for _, tc := range testCases {
+		result := FloatsEqualWithTolerance(tc.f1, tc.f2, tc.tolerance)
+		assert.True(t, result == tc.expected, "%f == %f with a tolerance of %f should be %v", tc.f1, tc.f2, tc.tolerance, tc.expected)
+	}
+}
+
 /*
 func TestCalcNumberOfSamplesForConfidence(t *testing.T) {
 	testCases := []struct {

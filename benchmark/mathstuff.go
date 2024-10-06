@@ -41,6 +41,20 @@ func Statistics(data []float64) (mean, variance, stddev float64) {
 	return
 }
 
+func FloatsEqualWithTolerance(f1, f2, tolerancePercentage float64) bool {
+	absTol1 := math.Abs(f1 * tolerancePercentage / 100)
+	if f1-absTol1 <= f2 && f1+absTol1 >= f2 {
+		return true
+	} else {
+		absTol2 := math.Abs(f2 * tolerancePercentage / 100)
+		if f2-absTol2 <= f1 && f2+absTol2 >= f1 {
+			return true
+		} else {
+			return false
+		}
+	}
+}
+
 /*
 func CalcNumberOfSamplesForConfidence(data []float64) int32 {
 	_, _, stddev := Statistics(data)
