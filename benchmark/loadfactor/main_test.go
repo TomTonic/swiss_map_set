@@ -40,7 +40,7 @@ func TestDoBenchmark2(t *testing.T) {
 	initialAlloc := uint32(150)
 	setSize := uint32(100)
 
-	result := doBenchmark2(rounds, numberOfSets, initialAlloc, setSize, 0xabcdef)
+	result := addBenchmark(rounds, numberOfSets, initialAlloc, setSize, 0xabcdef)
 
 	assert.True(t, len(result) == rounds, "Result should return %d measurements. It returned %d measurements.", rounds, len(result))
 	assert.False(t, containsZero(result), "Result should not contain zeros, but it does.")

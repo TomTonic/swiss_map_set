@@ -55,7 +55,22 @@ func doBenchmark(rounds, numberOfSets, initialAlloc, setSize uint32, seed uint64
 	fmt.Printf(hist.String())
 }
 
-func doBenchmark2(rounds int, numberOfSets, initialAlloc, setSize uint32, seed uint64) (measurements []time.Duration) {
+var rngOverhead = getPRNGOverhead()
+
+func getPRNGOverhead() float64 {
+	calibrationCalls := 500_000_000 // prng.Uint64() is about 1-2ns, timer resolution is 100ns (windows)
+	prng := benchmark.PRNG{State: 0x1234567890abcde}
+	start := hrtime.Now()
+	for i := 0; i < calibrationCalls; i++ {
+		prng.Uint64()
+	}
+	stop := hrtime.Now()
+	nowOverhead := hrtime.Overhead()
+	result := float64(stop-start-nowOverhead) / float64(calibrationCalls)
+	return result
+}
+
+func addBenchmark(rounds int, numberOfSets, initialAlloc, setSize uint32, seed uint64) (measurements []time.Duration) {
 	prng := benchmark.PRNG{State: seed}
 	set := make([]*set3.Set3[uint64], numberOfSets)
 	for i := range numberOfSets {
@@ -77,7 +92,7 @@ func doBenchmark2(rounds int, numberOfSets, initialAlloc, setSize uint32, seed u
 			}
 		}
 		endTime := hrtime.Now()
-		timePerRound[r] = endTime - startTime
+		timePerRound[r] = endTime - startTime - hrtime.Overhead() - time.Duration((rngOverhead * float64(numberOfSets*setSize)))
 	}
 	return timePerRound
 }
@@ -99,25 +114,40 @@ func toNSperAdd(measurements []time.Duration, addsPerRound uint32) []float64 {
 }
 
 func main() {
-	/*
-		fmt.Printf("rounds;numberOfSets;initialAlloc;setSize;memForAllSets;medianNSperRound;avgPerRound;varPerRound;stddevPerRound\n")
-		for i := range 200 {
-			doBenchmark(20_001, 100, 200+uint32(i), 200, 0xABCDEF0123456789)
-		}
-	*/
+	// one Set3.Add() execution takes roughly 7-8ns.
+	addsPerRound := 50_000.0   // 50_000 x ~8ns = ~400_000ns; Timer resolution 100ns (Windows) => 0,25% error, i.e. 0,02ns per Add()
+	totalAdds := 125_000_000.0 // 125_000_000 x ~8ns = ~1sec of benchmark timing per config, plus preparation overhead (allocation, garbage collection, clearing, median, etc.)
+
+	fromSetSize := uint32(100)
+	toSetSize := uint32(200)
+
+	fmt.Printf("Architecture:\t\t%s\n", runtime.GOARCH)
+	fmt.Printf("OS:\t\t\t%s\n", runtime.GOOS)
+	fmt.Printf("Timer precision:\t%fns\n", hrtime.NowPrecision())
+	fmt.Printf("hrtime.Now() overhead:\t%v\n", hrtime.Overhead())
+	fmt.Printf("prng.Uint64() overhead:\t%fns\n", rngOverhead)
+	fmt.Printf("Set3 sizes:\t\tfrom %d to %d\n", fromSetSize, toSetSize)
+	totalduration := time.Duration(8 * time.Nanosecond)         // about 8ns per Set3.Add(prng.Uint64())
+	totalduration *= time.Duration(totalAdds)                   // one round
+	totalduration *= time.Duration(100)                         // 100 different headroom percentages
+	totalduration *= time.Duration(toSetSize - fromSetSize + 1) // number of setSizes to evaluate
+	fmt.Printf("Expected total runtime:\t%v\n", totalduration)
+	fmt.Printf("\n")
+
 	fmt.Printf("setSize ")
 	for initSize := range 101 {
 		fmt.Printf("+%d%% ", initSize)
 	}
 	fmt.Printf("\n")
-	for setSize := uint32(100); setSize < 120; setSize++ {
+	for setSize := fromSetSize; setSize <= toSetSize; setSize++ {
 		fmt.Printf("%d ", setSize)
-		for initSize := uint32(0); initSize < 101; initSize++ {
+		for initSize := uint32(0); initSize <= 100; initSize++ {
 			initSizeVal := uint32(math.Round(float64(setSize) + (float64(setSize*initSize) / 100.0)))
-			numOfSets := uint32(math.Round(4000.0 / float64(setSize)))
-			rounds := int(math.Round(20_000_000.0 / float64(numOfSets*setSize)))
-			measurements := doBenchmark2(rounds, numOfSets, initSizeVal, setSize, 0xABCDEF0123456789)
-			nsValues := toNSperAdd(measurements, numOfSets*setSize)
+			numOfSets := uint32(math.Round(addsPerRound / float64(setSize)))
+			actualInsertsPerRound := numOfSets * setSize
+			rounds := int(math.Round(totalAdds / float64(actualInsertsPerRound)))
+			measurements := addBenchmark(rounds, numOfSets, initSizeVal, setSize, 0xABCDEF0123456789)
+			nsValues := toNSperAdd(measurements, actualInsertsPerRound)
 			median := benchmark.Median(nsValues)
 			fmt.Printf("%.3f ", median)
 		}
