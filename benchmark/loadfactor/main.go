@@ -6,6 +6,8 @@ import (
 	"math"
 	"runtime"
 	"runtime/debug"
+	"strconv"
+	"strings"
 	"time"
 
 	set3 "github.com/TomTonic/Set3"
@@ -119,6 +121,100 @@ func printTotalRuntime(start time.Time) {
 	fmt.Printf("\nTotal runtime of benchmark: %v\n", end.Sub(start))
 }
 
+// Percent is a custom flag type for parsing percent values.
+type Step struct {
+	isSet       bool
+	isPercent   bool
+	percent     float64
+	integerStep uint32
+}
+
+// Set parses the flag value and sets it.
+func (p *Step) Set(value string) error {
+	if strings.HasSuffix(value, "%") {
+		value = strings.TrimSuffix(value, "%")
+		p.isPercent = true
+	} else {
+		p.isPercent = false
+	}
+	if p.isPercent {
+		parsedValue, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return err
+		}
+		p.percent = parsedValue
+		p.isSet = true
+	} else {
+		parsedValue, err := strconv.ParseUint(value, 10, 32)
+		if err != nil {
+			return err
+		}
+		p.integerStep = uint32(parsedValue)
+		p.isSet = true
+	}
+	return nil
+}
+
+// String returns the string representation of the flag value.
+func (p *Step) String() string {
+	if !p.isSet {
+		return "1"
+	}
+	if p.isPercent {
+		return fmt.Sprintf("%f%%", p.percent)
+	}
+	return fmt.Sprintf("%d", p.integerStep)
+}
+
+func getNumberOfSteps(setSizeTo uint32, step Step) uint32 {
+	if step.isPercent {
+		pval := step.percent
+		count := uint32(0)
+		for f := 0.0; f < 100.0+pval; f += pval {
+			count++
+		}
+		return count
+	} else {
+		numberOfSteps := setSizeTo
+		return numberOfSteps + 1
+	}
+}
+
+func columnHeadings(setSizeTo uint32, step Step) []string {
+	result := make([]string, 0, 100)
+	if step.isPercent {
+		pval := step.percent
+		for f := 0.0; f < 100.0+pval; f += pval {
+			result = append(result, fmt.Sprintf("+%.2f%%%% ", f)) // caution: strings are used in fmt.Printf() so encode %% twice
+		}
+	} else {
+		numberOfSteps := setSizeTo
+		ival := step.integerStep
+		for i := uint32(0); i <= numberOfSteps; i += ival {
+			result = append(result, fmt.Sprintf("+%d ", i))
+		}
+	}
+	return result
+}
+
+func initSizeValues(currentSetSize, setSizeTo uint32, step Step) []uint32 {
+	result := make([]uint32, 0, 100)
+	if step.isPercent {
+		pval := step.percent
+		for f := 0.0; f <= 100.0; f += pval {
+			retval := currentSetSize + uint32(math.Round(f*float64(currentSetSize)))
+			result = append(result, retval)
+		}
+	} else {
+		numberOfSteps := setSizeTo
+		ival := step.integerStep
+		for i := currentSetSize; i <= currentSetSize+numberOfSteps; i += ival {
+			result = append(result, i)
+		}
+	}
+	return result
+}
+
 func main() {
 	var fromSetSize, toSetSize, addsPerRound uint
 	var assumeAddNs, secondsPerConfig float64
@@ -128,9 +224,17 @@ func main() {
 	// 50_000 x ~8ns = ~400_000ns; Timer resolution 100ns (Windows) => 0,25% error, i.e. 0,02ns per Add()
 	flag.UintVar(&addsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer resolution (Windows: 100ns)")
 	flag.Float64Var(&secondsPerConfig, "spc", 1.0, "SecondsPerConfig - estimated benchmark time per configuration in seconds")
-	flag.Float64Var(&assumeAddNs, "arpa", 8.0, "AssumedRuntimePerAdd - in nanoseconds per instruction. Used to predcict runtimes.")
+	flag.Float64Var(&assumeAddNs, "arpa", 8.0, "AssumedRuntimePerAdd - in nanoseconds per instruction. Used to predcict runtimes")
+	var step Step
+	flag.Var(&step, "step", "Step to increment headroom of pre-allocated sets. Either percent of set size (e.g. \"2.5%\") or absolut value (e.g. \"2\") (default: 1)")
 
 	flag.Parse()
+
+	if !step.isSet {
+		step.isSet = true
+		step.isPercent = false
+		step.integerStep = 1
+	}
 
 	totalAddsPerConfig := secondsPerConfig * (1_000_000_000.0 / float64(assumeAddNs))
 
@@ -141,10 +245,11 @@ func main() {
 	fmt.Printf("prng.Uint64() overhead:\t%fns (informative, already subtracted from below measurement values)\n", rngOverhead)
 	fmt.Printf("Add()'s per round:\t%d\n", addsPerRound)
 	fmt.Printf("Add()'s per config:\t%.0f (should result in a benchmarking time of %fs per config)\n", totalAddsPerConfig, secondsPerConfig)
-	fmt.Printf("Set3 sizes:\t\tfrom %d to %d\n", fromSetSize, toSetSize)
-	fmt.Printf("Number of configs:\t%d\n", 100*(toSetSize-fromSetSize+1))
+	fmt.Printf("Set3 sizes:\t\tfrom %d to %d, stepsize %v\n", fromSetSize, toSetSize, step.String())
+	numberOfStepsPerSetSize := getNumberOfSteps(uint32(toSetSize), step)
+	fmt.Printf("Number of configs:\t%d\n", numberOfStepsPerSetSize*uint32(toSetSize-fromSetSize+1))
 	totalduration := time.Duration(assumeAddNs * totalAddsPerConfig) // total ns per round
-	totalduration *= time.Duration(100)                              // 100 different headroom percentages
+	totalduration *= time.Duration(numberOfStepsPerSetSize)          // different headroom sizes per setSize
 	totalduration *= time.Duration(toSetSize - fromSetSize + 1)      // number of setSizes to evaluate
 	totalduration = time.Duration(float64(totalduration) * 1.12)     // overhead
 	fmt.Printf("Expected total runtime:\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, assumeAddNs)
@@ -154,13 +259,13 @@ func main() {
 	defer printTotalRuntime(start)
 
 	fmt.Printf("setSize ")
-	for initSize := range 101 {
-		fmt.Printf("+%d%% ", initSize)
+	for _, columnH := range columnHeadings(uint32(toSetSize), step) {
+		fmt.Printf(columnH)
 	}
 	fmt.Printf("\n")
 	for setSize := uint32(fromSetSize); setSize <= uint32(toSetSize); setSize++ {
 		fmt.Printf("%d ", setSize)
-		for initSize := uint32(0); initSize <= 100; initSize++ {
+		for _, initSize := range initSizeValues(setSize, uint32(toSetSize), step) {
 			initSizeVal := uint32(math.Round(float64(setSize) + (float64(setSize*initSize) / 100.0)))
 			numOfSets := uint32(math.Round(float64(addsPerRound) / float64(setSize)))
 			actualInsertsPerRound := numOfSets * setSize
