@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math"
 	"runtime"
@@ -113,39 +114,57 @@ func toNSperAdd(measurements []time.Duration, addsPerRound uint32) []float64 {
 	return result
 }
 
-func main() {
-	// one Set3.Add() execution takes roughly 7-8ns.
-	addsPerRound := 50_000.0   // 50_000 x ~8ns = ~400_000ns; Timer resolution 100ns (Windows) => 0,25% error, i.e. 0,02ns per Add()
-	totalAdds := 125_000_000.0 // 125_000_000 x ~8ns = ~1sec of benchmark timing per config, plus preparation overhead (allocation, garbage collection, clearing, median, etc.)
+func printTotalRuntime(start time.Time) {
+	end := time.Now()
+	fmt.Printf("\nTotal runtime of benchmark: %v\n", end.Sub(start))
+}
 
-	fromSetSize := uint32(100)
-	toSetSize := uint32(200)
+func main() {
+	var fromSetSize, toSetSize, addsPerRound uint
+	var assumeAddNs, secondsPerConfig float64
+
+	flag.UintVar(&fromSetSize, "from", 100, "First set size to benchmark (inclusive)")
+	flag.UintVar(&toSetSize, "to", 200, "Last set size to benchmark (inclusive)")
+	// 50_000 x ~8ns = ~400_000ns; Timer resolution 100ns (Windows) => 0,25% error, i.e. 0,02ns per Add()
+	flag.UintVar(&addsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer resolution (Windows: 100ns)")
+	flag.Float64Var(&secondsPerConfig, "spc", 1.0, "SecondsPerConfig - estimated benchmark time per configuration in seconds")
+	flag.Float64Var(&assumeAddNs, "arpa", 8.0, "AssumedRuntimePerAdd - in nanoseconds per instruction. Used to predcict runtimes.")
+
+	flag.Parse()
+
+	totalAddsPerConfig := secondsPerConfig * (1_000_000_000.0 / float64(assumeAddNs))
 
 	fmt.Printf("Architecture:\t\t%s\n", runtime.GOARCH)
 	fmt.Printf("OS:\t\t\t%s\n", runtime.GOOS)
 	fmt.Printf("Timer precision:\t%fns\n", hrtime.NowPrecision())
-	fmt.Printf("hrtime.Now() overhead:\t%v\n", hrtime.Overhead())
-	fmt.Printf("prng.Uint64() overhead:\t%fns\n", rngOverhead)
+	fmt.Printf("hrtime.Now() overhead:\t%v (informative, already subtracted from below measurement values)\n", hrtime.Overhead())
+	fmt.Printf("prng.Uint64() overhead:\t%fns (informative, already subtracted from below measurement values)\n", rngOverhead)
+	fmt.Printf("Add()'s per round:\t%d\n", addsPerRound)
+	fmt.Printf("Add()'s per config:\t%.0f (should result in a benchmarking time of %fs per config)\n", totalAddsPerConfig, secondsPerConfig)
 	fmt.Printf("Set3 sizes:\t\tfrom %d to %d\n", fromSetSize, toSetSize)
-	totalduration := time.Duration(8 * time.Nanosecond)         // about 8ns per Set3.Add(prng.Uint64())
-	totalduration *= time.Duration(totalAdds)                   // one round
-	totalduration *= time.Duration(100)                         // 100 different headroom percentages
-	totalduration *= time.Duration(toSetSize - fromSetSize + 1) // number of setSizes to evaluate
-	fmt.Printf("Expected total runtime:\t%v\n", totalduration)
+	fmt.Printf("Number of configs:\t%d\n", 100*(toSetSize-fromSetSize+1))
+	totalduration := time.Duration(assumeAddNs * totalAddsPerConfig) // total ns per round
+	totalduration *= time.Duration(100)                              // 100 different headroom percentages
+	totalduration *= time.Duration(toSetSize - fromSetSize + 1)      // number of setSizes to evaluate
+	totalduration = time.Duration(float64(totalduration) * 1.12)     // overhead
+	fmt.Printf("Expected total runtime:\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, assumeAddNs)
 	fmt.Printf("\n")
+
+	start := time.Now()
+	defer printTotalRuntime(start)
 
 	fmt.Printf("setSize ")
 	for initSize := range 101 {
 		fmt.Printf("+%d%% ", initSize)
 	}
 	fmt.Printf("\n")
-	for setSize := fromSetSize; setSize <= toSetSize; setSize++ {
+	for setSize := uint32(fromSetSize); setSize <= uint32(toSetSize); setSize++ {
 		fmt.Printf("%d ", setSize)
 		for initSize := uint32(0); initSize <= 100; initSize++ {
 			initSizeVal := uint32(math.Round(float64(setSize) + (float64(setSize*initSize) / 100.0)))
-			numOfSets := uint32(math.Round(addsPerRound / float64(setSize)))
+			numOfSets := uint32(math.Round(float64(addsPerRound) / float64(setSize)))
 			actualInsertsPerRound := numOfSets * setSize
-			rounds := int(math.Round(totalAdds / float64(actualInsertsPerRound)))
+			rounds := int(math.Round(totalAddsPerConfig / float64(actualInsertsPerRound)))
 			measurements := addBenchmark(rounds, numOfSets, initSizeVal, setSize, 0xABCDEF0123456789)
 			nsValues := toNSperAdd(measurements, actualInsertsPerRound)
 			median := benchmark.Median(nsValues)
